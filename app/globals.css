@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,15 +12,55 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ID card root: width/height/font-size are set inline so they scale together via em units. */
+.id-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.signature-font {
+  font-family: "Brush Script MT", "Lucida Handwriting", "Segoe Script", cursive;
+}
+
+/* ============ PRINT ============ */
+@media print {
+  body {
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    background: white !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    display: flex !important;
+    gap: 0.25in !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    min-height: auto !important;
+  }
+  .id-card {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    page-break-inside: avoid;
+  }
+  .print-hide {
+    display: none !important;
+  }
+  @page {
+    margin: 0.4in;
+  }
 }
