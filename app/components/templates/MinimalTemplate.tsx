@@ -85,11 +85,10 @@ function Front({ data }: { data: CardData }) {
       </div>
 
       <div className="flex-1" style={{ padding: "0 1.2em 1em" }}>
-        <MinInfo label="Reg No" value={data.regNo} />
-        <MinInfo label="Student ID" value={data.studentId} />
+        <MinInfo label="LRN" value={data.lrn} />
         <MinInfo label="Name" value={data.studentName} highlight />
         <MinInfo label="Guardian" value={data.guardian} />
-        <MinInfo label="Class" value={data.className} />
+        <MinInfo label="Birthday" value={data.birthday} />
         <MinInfo label="Emergency" value={data.emergency} />
       </div>
 

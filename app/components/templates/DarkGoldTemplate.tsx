@@ -90,11 +90,10 @@ function Front({ data }: { data: CardData }) {
 
       {/* Info table */}
       <div className="flex-1" style={{ padding: "1em 1.2em" }}>
-        <DarkInfoRow label="Reg No" value={data.regNo} />
-        <DarkInfoRow label="Student ID" value={data.studentId} />
+        <DarkInfoRow label="LRN" value={data.lrn} />
         <DarkInfoRow label="Name" value={data.studentName} accent />
         <DarkInfoRow label="Guardian" value={data.guardian} />
-        <DarkInfoRow label="Class" value={data.className} />
+        <DarkInfoRow label="Birthday" value={data.birthday} />
         <DarkInfoRow label="Emergency" value={data.emergency} />
       </div>
     </>

@@ -82,11 +82,10 @@ function Front({ data }: { data: CardData }) {
 
       {/* Body */}
       <div className="flex-1 flex flex-col justify-center" style={{ padding: "5em 1.3em 1em" }}>
-        <InfoRow label="Reg No" value={data.regNo} />
-        <InfoRow label="Student ID" value={data.studentId} />
+        <InfoRow label="LRN" value={data.lrn} />
         <InfoRow label="Student Name" value={data.studentName} />
         <InfoRow label="Father/ Guardian" value={data.guardian} />
-        <InfoRow label="Class" value={data.className} />
+        <InfoRow label="Birthday" value={data.birthday} />
         <InfoRow label="Emergency Call" value={data.emergency} />
       </div>
     </>

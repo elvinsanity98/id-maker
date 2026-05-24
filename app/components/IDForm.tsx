@@ -147,11 +147,10 @@ export default function IDForm({
       </Section>
 
       <Section title="Student Information (Front)">
-        <Field label="Reg No" value={data.regNo} onChange={update("regNo")} />
-        <Field label="Student ID" value={data.studentId} onChange={update("studentId")} />
+        <Field label="LRN" value={data.lrn} onChange={update("lrn")} />
         <Field label="Student Name" value={data.studentName} onChange={update("studentName")} />
         <Field label="Father / Guardian" value={data.guardian} onChange={update("guardian")} />
-        <Field label="Class" value={data.className} onChange={update("className")} />
+        <Field label="Birthday" value={data.birthday} onChange={update("birthday")} />
         <Field label="Emergency Call" value={data.emergency} onChange={update("emergency")} />
       </Section>
 

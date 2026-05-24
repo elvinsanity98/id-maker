@@ -1,11 +1,10 @@
 export type CardData = {
   schoolName: string;
   slogan: string;
-  regNo: string;
-  studentId: string;
+  lrn: string;
   studentName: string;
   guardian: string;
-  className: string;
+  birthday: string;
   emergency: string;
   phone: string;
   mail: string;
@@ -57,11 +56,10 @@ export type CardSide = "front" | "back";
 export const DEFAULT_DATA: CardData = {
   schoolName: "ABC SCHOOL NAME",
   slogan: "SLOGAN HERE",
-  regNo: "123456",
-  studentId: "1234",
+  lrn: "123456789012",
   studentName: "Name Here",
   guardian: "Name Here",
-  className: "Class Here",
+  birthday: "DD/MM/YYYY",
   emergency: "123-456-7890",
   phone: "123-456-7890",
   mail: "urmail@email.com",
