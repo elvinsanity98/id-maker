@@ -8,13 +8,17 @@ import { TIER_LIMITS, type DraftPayload, type DraftRow } from "@/lib/types";
 type Props = {
   currentPayload: DraftPayload;
   onLoad: (payload: DraftPayload) => void;
-  onPrintBatch: (payloads: DraftPayload[]) => void;
+  /** Fired whenever the checkbox selection changes. Drives the live preview. */
+  onSelectionChange: (payloads: DraftPayload[]) => void;
+  /** User clicked "Print N selected" — preview already shows the batch. */
+  onPrintBatch: () => void;
   onUpgradeRequest: () => void;
 };
 
 export default function DraftsPanel({
   currentPayload,
   onLoad,
+  onSelectionChange,
   onPrintBatch,
   onUpgradeRequest,
 }: Props) {
@@ -45,6 +49,15 @@ export default function DraftsPanel({
     }
     refresh();
   }, [user, refresh]);
+
+  // Whenever the selection or drafts list changes, recompute the array of
+  // selected payloads and notify the parent. This is what drives the live
+  // preview / print / download — keeping selection here but emitting upward
+  // lets the panel stay self-contained while the rest of the app reacts.
+  useEffect(() => {
+    const payloads = drafts.filter((d) => selected.has(d.id)).map((d) => d.payload);
+    onSelectionChange(payloads);
+  }, [selected, drafts, onSelectionChange]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -101,11 +114,17 @@ export default function DraftsPanel({
       onUpgradeRequest();
       return;
     }
-    const payloads = drafts
-      .filter((d) => selected.has(d.id))
-      .map((d) => d.payload);
-    if (payloads.length === 0) return;
-    onPrintBatch(payloads);
+    if (selectedCount === 0) return;
+    // Preview is already showing the batch (driven by onSelectionChange).
+    // Just fire the print dialog.
+    onPrintBatch();
+  };
+
+  // When the user clicks a draft to LOAD it for editing, drop the batch
+  // selection too so the preview switches back to the single edit view.
+  const handleLoadClick = (payload: DraftPayload) => {
+    setSelected(new Set());
+    onLoad(payload);
   };
 
   // Preserve original draft order when building the batch payload list.
@@ -229,9 +248,9 @@ export default function DraftsPanel({
                   />
                   <button
                     type="button"
-                    onClick={() => onLoad(d.payload)}
+                    onClick={() => handleLoadClick(d.payload)}
                     className="flex-1 text-left min-w-0"
-                    title="Load this draft into the editor"
+                    title="Load this draft into the editor (clears batch selection)"
                   >
                     <div className="text-sm font-medium text-slate-800 truncate hover:text-blue-600">
                       {d.name}
@@ -253,11 +272,10 @@ export default function DraftsPanel({
               );
             })}
           </ul>
-          {selectedDrafts.length > 0 && (
-            <p className="text-[10px] text-slate-500 mt-2 italic">
-              Tick the box to include a draft in the next batch print.
-            </p>
-          )}
+          <p className="text-[10px] text-slate-500 mt-2 italic">
+            Tick a box to include a draft in the preview. Anything you check
+            is what prints and downloads.
+          </p>
         </>
       )}
 

@@ -43,6 +43,21 @@ body {
 
 /* ============ PRINT ============ */
 @media print {
+  /* Force the browser to print background colors, gradients, and SVG
+     fills as they appear on screen. Without this, Chrome/Edge/Firefox
+     strip backgrounds to save ink and the cards print as white
+     rectangles with floating text — which is exactly what looked
+     "different colors from the template" in print preview. */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  html {
+    color-scheme: light;
+  }
   body {
     background: white !important;
   }
@@ -58,11 +73,13 @@ body {
     justify-content: flex-start !important;
     flex-wrap: wrap !important;
     min-height: auto !important;
+    overflow: visible !important;
   }
   .id-card {
     box-shadow: none !important;
     border: 1px solid #cbd5e1 !important;
     page-break-inside: avoid;
+    break-inside: avoid;
   }
   .print-hide {
     display: none !important;
