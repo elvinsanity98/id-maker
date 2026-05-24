@@ -75,7 +75,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh();
-    if (!supabase) return;
+
+    // Belt-and-suspenders: if anything upstream (network stall, hung
+    // SDK init, etc.) prevents refresh() from flipping `loaded`, this
+    // guarantees the UI gets out of the loading state after 5s. The
+    // worst case is a brief "Sign in" button when the user is already
+    // signed in — they can click it and the SDK reconciles.
+    const safety = setTimeout(() => setLoaded(true), 5000);
+
+    if (!supabase) return () => clearTimeout(safety);
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       try {
         if (session?.user) {
@@ -89,7 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      clearTimeout(safety);
+      sub.subscription.unsubscribe();
+    };
   }, [refresh, fetchProfile]);
 
   const signUp: AuthContextValue["signUp"] = useCallback(async (email, password, fullName) => {

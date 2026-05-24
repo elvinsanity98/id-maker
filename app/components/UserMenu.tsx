@@ -10,10 +10,10 @@ export default function UserMenu({ onUpgradeClick }: { onUpgradeClick: () => voi
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (!loaded) {
-    return <div className="text-white/70 text-sm">…</div>;
-  }
-
+  // When we don't yet have a user object (still loading, or genuinely
+  // signed-out), render the sign-in / sign-up affordance. This is the
+  // critical guarantee: there is ALWAYS a way to authenticate, even
+  // if the profile fetch is hanging or returned null unexpectedly.
   if (!user) {
     return (
       <>
@@ -25,6 +25,7 @@ export default function UserMenu({ onUpgradeClick }: { onUpgradeClick: () => voi
               setAuthOpen(true);
             }}
             className="px-3 py-1.5 text-sm font-semibold text-white border border-white/40 rounded-md hover:bg-white/10 transition"
+            aria-busy={!loaded}
           >
             Sign in
           </button>
@@ -35,6 +36,7 @@ export default function UserMenu({ onUpgradeClick }: { onUpgradeClick: () => voi
               setAuthOpen(true);
             }}
             className="px-3 py-1.5 text-sm font-semibold text-blue-700 bg-white rounded-md hover:bg-slate-100 transition"
+            aria-busy={!loaded}
           >
             Sign up
           </button>
