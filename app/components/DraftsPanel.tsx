@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
-import { deleteDraft, listDrafts, saveDraft } from "@/lib/drafts";
+import { deleteDraft, listDrafts, saveDraft, updateDraft } from "@/lib/drafts";
 import { TIER_LIMITS, type DraftPayload, type DraftRow } from "@/lib/types";
+
+/** The draft currently being edited (loaded into the form). */
+export type ActiveDraft = { id: string; name: string } | null;
 
 type Props = {
   currentPayload: DraftPayload;
@@ -12,6 +15,9 @@ type Props = {
   onSelectionChange: (payloads: DraftPayload[]) => void;
   /** User clicked "Print N selected" — preview already shows the batch. */
   onPrintBatch: () => void;
+  /** Which draft is currently loaded into the editor (null = brand-new card). */
+  activeDraft: ActiveDraft;
+  setActiveDraft: (d: ActiveDraft) => void;
   onUpgradeRequest: () => void;
 };
 
@@ -20,6 +26,8 @@ export default function DraftsPanel({
   onLoad,
   onSelectionChange,
   onPrintBatch,
+  activeDraft,
+  setActiveDraft,
   onUpgradeRequest,
 }: Props) {
   const { user, tier } = useAuth();
@@ -29,6 +37,7 @@ export default function DraftsPanel({
   const [showSave, setShowSave] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [savedHint, setSavedHint] = useState<string | null>(null);
 
   const limit = TIER_LIMITS[tier].maxDrafts;
   const batchLimit = TIER_LIMITS[tier].maxCopies;
@@ -45,10 +54,11 @@ export default function DraftsPanel({
     if (!user) {
       setDrafts([]);
       setSelected(new Set());
+      setActiveDraft(null);
       return;
     }
     refresh();
-  }, [user, refresh]);
+  }, [user, refresh, setActiveDraft]);
 
   // Whenever the selection or drafts list changes, recompute the array of
   // selected payloads and notify the parent. This is what drives the live
@@ -91,6 +101,7 @@ export default function DraftsPanel({
     }
     setShowSave(false);
     setDraftName("");
+    flashSaved("Saved as new draft");
     refresh();
   };
 
@@ -106,6 +117,32 @@ export default function DraftsPanel({
       next.delete(id);
       return next;
     });
+    // Drop the active marker if we just deleted the loaded draft.
+    if (activeDraft?.id === id) setActiveDraft(null);
+    refresh();
+  };
+
+  const flashSaved = (msg: string) => {
+    setSavedHint(msg);
+    setTimeout(() => setSavedHint(null), 1800);
+  };
+
+  /** Update the currently-loaded draft in place. */
+  const onSaveChanges = async () => {
+    if (!user || !activeDraft) return;
+    setBusy(true);
+    setError(null);
+    const { error: err } = await updateDraft(
+      activeDraft.id,
+      activeDraft.name,
+      currentPayload
+    );
+    setBusy(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    flashSaved(`Saved "${activeDraft.name}"`);
     refresh();
   };
 
@@ -120,18 +157,14 @@ export default function DraftsPanel({
     onPrintBatch();
   };
 
-  // When the user clicks a draft to LOAD it for editing, drop the batch
-  // selection too so the preview switches back to the single edit view.
-  const handleLoadClick = (payload: DraftPayload) => {
+  // When the user clicks a draft to LOAD it for editing, mark it as the
+  // active draft (so subsequent "Save changes" updates it in place) and
+  // drop the batch selection so the preview switches back to single-edit.
+  const handleLoadClick = (draft: DraftRow) => {
     setSelected(new Set());
-    onLoad(payload);
+    setActiveDraft({ id: draft.id, name: draft.name });
+    onLoad(draft.payload);
   };
-
-  // Preserve original draft order when building the batch payload list.
-  const selectedDrafts = useMemo(
-    () => drafts.filter((d) => selected.has(d.id)),
-    [drafts, selected]
-  );
 
   if (!user) {
     return (
@@ -159,19 +192,66 @@ export default function DraftsPanel({
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          if (atLimit) {
-            onUpgradeRequest();
-            return;
-          }
-          setShowSave(true);
-        }}
-        className="w-full mb-2 px-3 py-2 text-sm font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-      >
-        + Save current as draft
-      </button>
+      {activeDraft && (
+        <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-[11px] text-blue-900">
+          Editing: <strong>{activeDraft.name}</strong>
+          <button
+            type="button"
+            onClick={() => setActiveDraft(null)}
+            className="float-right text-blue-700 hover:text-blue-900 underline"
+            title="Stop tracking this draft"
+          >
+            unlink
+          </button>
+        </div>
+      )}
+
+      {activeDraft ? (
+        <div className="flex gap-2 mb-2">
+          <button
+            type="button"
+            onClick={onSaveChanges}
+            disabled={busy}
+            className="flex-1 px-3 py-2 text-sm font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            💾 Save changes
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (atLimit) {
+                onUpgradeRequest();
+                return;
+              }
+              setShowSave(true);
+            }}
+            className="px-3 py-2 text-sm font-semibold bg-white text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50 transition"
+            title="Save as a separate new draft"
+          >
+            + New copy
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            if (atLimit) {
+              onUpgradeRequest();
+              return;
+            }
+            setShowSave(true);
+          }}
+          className="w-full mb-2 px-3 py-2 text-sm font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+        >
+          + Save current as draft
+        </button>
+      )}
+
+      {savedHint && (
+        <div className="mb-2 px-2 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded">
+          ✓ {savedHint}
+        </div>
+      )}
 
       {drafts.length === 0 ? (
         <div className="text-xs text-slate-400 italic text-center py-2">
@@ -230,12 +310,15 @@ export default function DraftsPanel({
           <ul className="space-y-1.5 max-h-48 overflow-y-auto">
             {drafts.map((d) => {
               const isChecked = selected.has(d.id);
+              const isActive = activeDraft?.id === d.id;
               return (
                 <li
                   key={d.id}
                   className={`flex items-center gap-2 px-2 py-1.5 rounded border transition ${
                     isChecked
                       ? "bg-emerald-50 border-emerald-300"
+                      : isActive
+                      ? "bg-blue-50 border-blue-300"
                       : "bg-slate-50 border-slate-200"
                   }`}
                 >
@@ -248,12 +331,21 @@ export default function DraftsPanel({
                   />
                   <button
                     type="button"
-                    onClick={() => handleLoadClick(d.payload)}
+                    onClick={() => handleLoadClick(d)}
                     className="flex-1 text-left min-w-0"
                     title="Load this draft into the editor (clears batch selection)"
                   >
-                    <div className="text-sm font-medium text-slate-800 truncate hover:text-blue-600">
+                    <div
+                      className={`text-sm font-medium truncate hover:text-blue-600 ${
+                        isActive ? "text-blue-700" : "text-slate-800"
+                      }`}
+                    >
                       {d.name}
+                      {isActive && (
+                        <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                          · editing
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] text-slate-400">
                       {new Date(d.updated_at).toLocaleString()}

@@ -4,7 +4,7 @@ import { ChangeEvent } from "react";
 import type { CardData, CardSize, ColorPalette, DraftPayload, TemplateId } from "@/lib/types";
 import { CARD_SIZES, PALETTES, TEMPLATES, TIER_LIMITS } from "@/lib/types";
 import { useAuth, type Tier } from "./AuthProvider";
-import DraftsPanel from "./DraftsPanel";
+import DraftsPanel, { type ActiveDraft } from "./DraftsPanel";
 
 type Props = {
   data: CardData;
@@ -21,6 +21,8 @@ type Props = {
   onLoadDraft: (payload: DraftPayload) => void;
   onSelectionChange: (payloads: DraftPayload[]) => void;
   onPrintBatch: () => void;
+  activeDraft: ActiveDraft;
+  setActiveDraft: (d: ActiveDraft) => void;
   onPrint: () => void;
   onReset: () => void;
   onUpgradeRequest: () => void;
@@ -53,6 +55,8 @@ export default function IDForm({
   onLoadDraft,
   onSelectionChange,
   onPrintBatch,
+  activeDraft,
+  setActiveDraft,
   onPrint,
   onReset,
   onUpgradeRequest,
@@ -103,6 +107,8 @@ export default function IDForm({
           onLoad={onLoadDraft}
           onSelectionChange={onSelectionChange}
           onPrintBatch={onPrintBatch}
+          activeDraft={activeDraft}
+          setActiveDraft={setActiveDraft}
           onUpgradeRequest={onUpgradeRequest}
         />
       </Section>

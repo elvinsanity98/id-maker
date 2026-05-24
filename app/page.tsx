@@ -5,6 +5,7 @@ import IDForm from "./components/IDForm";
 import IDPreview from "./components/IDPreview";
 import UserMenu from "./components/UserMenu";
 import UpgradeModal from "./components/UpgradeModal";
+import type { ActiveDraft } from "./components/DraftsPanel";
 import {
   CARD_SIZES,
   DEFAULT_DATA,
@@ -32,6 +33,9 @@ export default function Home() {
   // renders these instead of the single-card editor state, so what you see
   // is exactly what print / download produces.
   const [batchPayloads, setBatchPayloads] = useState<DraftPayload[]>([]);
+  // The draft currently loaded into the editor. "Save changes" in the
+  // drafts panel updates this row in place instead of creating a new one.
+  const [activeDraft, setActiveDraft] = useState<ActiveDraft>(null);
 
   const handleTemplateChange = (t: TemplateId) => {
     setTemplate(t);
@@ -85,10 +89,13 @@ export default function Home() {
     // in DraftsPanel) so we just kick off the print dialog.
     window.print();
   }, []);
+
   const handleReset = () => {
     if (confirm("Reset all fields back to defaults?")) {
       setData(DEFAULT_DATA);
       setCopies(1);
+      // Resetting fields means we're no longer "editing" a specific draft.
+      setActiveDraft(null);
     }
   };
 
@@ -123,6 +130,8 @@ export default function Home() {
             onLoadDraft={loadDraft}
             onSelectionChange={setBatchPayloads}
             onPrintBatch={handlePrintBatch}
+            activeDraft={activeDraft}
+            setActiveDraft={setActiveDraft}
             onPrint={handlePrint}
             onReset={handleReset}
             onUpgradeRequest={() => setUpgradeOpen(true)}
