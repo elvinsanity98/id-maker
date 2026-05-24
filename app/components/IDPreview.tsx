@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { CardData, CardSide, CardSize, ColorPalette, TemplateId } from "@/lib/types";
+import type { CardConfig, CardSide } from "@/lib/types";
 import BlueWaveTemplate from "./templates/BlueWaveTemplate";
 import DarkGoldTemplate from "./templates/DarkGoldTemplate";
 import MinimalTemplate from "./templates/MinimalTemplate";
@@ -10,24 +10,25 @@ import { useAuth } from "./AuthProvider";
 import ExportButton from "./ExportButton";
 
 type Props = {
-  data: CardData;
-  size: CardSize;
-  template: TemplateId;
-  palette: ColorPalette;
+  /**
+   * Card slots to render. In single-edit mode this is the current
+   * editor state repeated `copies` times. In batch mode the parent
+   * builds it from the selected drafts so each entry is a different
+   * student.
+   */
+  configs: CardConfig[];
   view: CardSide | "both";
   setView: (v: CardSide | "both") => void;
-  copies: number;
+  /** True when configs came from a batch-print of drafts, false otherwise. */
+  isBatch: boolean;
   onUpgradeRequest: () => void;
 };
 
 export default function IDPreview({
-  data,
-  size,
-  template,
-  palette,
+  configs,
   view,
   setView,
-  copies,
+  isBatch,
   onUpgradeRequest,
 }: Props) {
   const { tier } = useAuth();
@@ -35,22 +36,23 @@ export default function IDPreview({
   const showFront = view === "front" || view === "both";
   const showBack = view === "back" || view === "both";
   const printAreaRef = useRef<HTMLDivElement>(null);
-  // Clamp the rendered copies — UI also enforces this but defense-in-depth.
-  const safeCopies = Math.max(1, Math.min(50, copies));
-  const fileBase = (data.studentName || "id-card")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40) || "id-card";
 
-  // Build the list of card slots to render. When copies > 1 we repeat
-  // whichever side(s) are visible — gives a true preview of what print
-  // will produce.
-  const slots: Array<{ side: CardSide; key: string }> = [];
-  for (let i = 0; i < safeCopies; i++) {
-    if (showFront) slots.push({ side: "front", key: `front-${i}` });
-    if (showBack) slots.push({ side: "back", key: `back-${i}` });
-  }
+  // Build the flat list of cards we'll render: each config contributes the
+  // selected side(s). Cards stay in declared inch dimensions so they print
+  // exactly the same regardless of how many are in the batch.
+  const slots: Array<{ config: CardConfig; side: CardSide; key: string }> = [];
+  configs.forEach((cfg, i) => {
+    if (showFront) slots.push({ config: cfg, side: "front", key: `${i}-front` });
+    if (showBack) slots.push({ config: cfg, side: "back", key: `${i}-back` });
+  });
+
+  const totalCards = slots.length;
+  const fileBase =
+    (configs[0]?.data.studentName || "id-card")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "id-card";
 
   return (
     <section className="bg-white rounded-xl shadow-sm p-3 sm:p-6 min-h-[420px] sm:min-h-[600px]">
@@ -62,16 +64,25 @@ export default function IDPreview({
         </div>
         <ExportButton
           getNode={() => printAreaRef.current}
-          baseName={fileBase}
+          baseName={isBatch ? "id-batch" : fileBase}
           onUpgradeRequest={onUpgradeRequest}
         />
       </div>
 
-      {safeCopies > 1 && (
+      {(isBatch || configs.length > 1) && (
         <div className="no-print text-xs text-slate-500 mb-3 px-2">
-          Printing <strong>{safeCopies}</strong>{" "}
-          {showFront && showBack ? "double-sided " : ""}
-          {safeCopies === 1 ? "card" : "cards"}.
+          {isBatch ? (
+            <>
+              Batch print: <strong>{configs.length}</strong>{" "}
+              {configs.length === 1 ? "student" : "students"} · {totalCards}{" "}
+              {totalCards === 1 ? "card" : "cards"} total
+            </>
+          ) : (
+            <>
+              Printing <strong>{configs.length}</strong>{" "}
+              {configs.length === 1 ? "card" : "cards"}.
+            </>
+          )}
         </div>
       )}
 
@@ -79,19 +90,13 @@ export default function IDPreview({
         ref={printAreaRef}
         className="print-area flex justify-center items-center gap-4 sm:gap-6 flex-wrap p-3 sm:p-8 bg-slate-50 rounded-lg min-h-[340px] sm:min-h-[500px] overflow-x-auto"
       >
-        {slots.map(({ side, key }) => (
+        {slots.map(({ config, side, key }) => (
           <CardWithWatermark
             key={key}
             side={side}
             showWatermark={showWatermark && side === "back"}
           >
-            <TemplateCard
-              data={data}
-              size={size}
-              template={template}
-              palette={palette}
-              side={side}
-            />
+            <TemplateCard config={config} side={side} />
           </CardWithWatermark>
         ))}
       </div>
@@ -132,19 +137,8 @@ function CardWithWatermark({
   );
 }
 
-function TemplateCard({
-  data,
-  size,
-  template,
-  palette,
-  side,
-}: {
-  data: CardData;
-  size: CardSize;
-  template: TemplateId;
-  palette: ColorPalette;
-  side: CardSide;
-}) {
+function TemplateCard({ config, side }: { config: CardConfig; side: CardSide }) {
+  const { data, size, template, palette } = config;
   if (template === "dark-gold")
     return <DarkGoldTemplate data={data} size={size} side={side} palette={palette} />;
   if (template === "minimal")

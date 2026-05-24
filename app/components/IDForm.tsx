@@ -19,6 +19,7 @@ type Props = {
   setCopies: (n: number) => void;
   draftPayload: DraftPayload;
   onLoadDraft: (payload: DraftPayload) => void;
+  onPrintBatch: (payloads: DraftPayload[]) => void;
   onPrint: () => void;
   onReset: () => void;
   onUpgradeRequest: () => void;
@@ -49,6 +50,7 @@ export default function IDForm({
   setCopies,
   draftPayload,
   onLoadDraft,
+  onPrintBatch,
   onPrint,
   onReset,
   onUpgradeRequest,
@@ -97,6 +99,7 @@ export default function IDForm({
         <DraftsPanel
           currentPayload={draftPayload}
           onLoad={onLoadDraft}
+          onPrintBatch={onPrintBatch}
           onUpgradeRequest={onUpgradeRequest}
         />
       </Section>

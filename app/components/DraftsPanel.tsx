@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { deleteDraft, listDrafts, saveDraft } from "@/lib/drafts";
 import { TIER_LIMITS, type DraftPayload, type DraftRow } from "@/lib/types";
@@ -8,19 +8,29 @@ import { TIER_LIMITS, type DraftPayload, type DraftRow } from "@/lib/types";
 type Props = {
   currentPayload: DraftPayload;
   onLoad: (payload: DraftPayload) => void;
+  onPrintBatch: (payloads: DraftPayload[]) => void;
   onUpgradeRequest: () => void;
 };
 
-export default function DraftsPanel({ currentPayload, onLoad, onUpgradeRequest }: Props) {
+export default function DraftsPanel({
+  currentPayload,
+  onLoad,
+  onPrintBatch,
+  onUpgradeRequest,
+}: Props) {
   const { user, tier } = useAuth();
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [showSave, setShowSave] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const limit = TIER_LIMITS[tier].maxDrafts;
+  const batchLimit = TIER_LIMITS[tier].maxCopies;
   const atLimit = drafts.length >= limit;
+  const selectedCount = selected.size;
+  const overBatch = selectedCount > batchLimit;
 
   const refresh = useCallback(async () => {
     const { data } = await listDrafts();
@@ -30,10 +40,22 @@ export default function DraftsPanel({ currentPayload, onLoad, onUpgradeRequest }
   useEffect(() => {
     if (!user) {
       setDrafts([]);
+      setSelected(new Set());
       return;
     }
     refresh();
   }, [user, refresh]);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const selectAll = () => setSelected(new Set(drafts.map((d) => d.id)));
+  const clearSelection = () => setSelected(new Set());
 
   const onSave = async () => {
     if (!user) return;
@@ -66,13 +88,37 @@ export default function DraftsPanel({ currentPayload, onLoad, onUpgradeRequest }
       alert(err);
       return;
     }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     refresh();
   };
+
+  const handlePrintBatch = () => {
+    if (overBatch) {
+      onUpgradeRequest();
+      return;
+    }
+    const payloads = drafts
+      .filter((d) => selected.has(d.id))
+      .map((d) => d.payload);
+    if (payloads.length === 0) return;
+    onPrintBatch(payloads);
+  };
+
+  // Preserve original draft order when building the batch payload list.
+  const selectedDrafts = useMemo(
+    () => drafts.filter((d) => selected.has(d.id)),
+    [drafts, selected]
+  );
 
   if (!user) {
     return (
       <div className="text-xs text-slate-500 italic p-2 bg-slate-50 rounded border border-slate-200">
-        Sign in to save and reload your designs later.
+        Sign in to save and reload your designs later. Each student you save here
+        becomes a draft you can include in a batch print.
       </div>
     );
   }
@@ -103,45 +149,116 @@ export default function DraftsPanel({ currentPayload, onLoad, onUpgradeRequest }
           }
           setShowSave(true);
         }}
-        className="w-full mb-3 px-3 py-2 text-sm font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+        className="w-full mb-2 px-3 py-2 text-sm font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
       >
         + Save current as draft
       </button>
 
       {drafts.length === 0 ? (
-        <div className="text-xs text-slate-400 italic text-center py-2">No drafts yet.</div>
+        <div className="text-xs text-slate-400 italic text-center py-2">
+          No drafts yet. Save a student to print them as part of a batch later.
+        </div>
       ) : (
-        <ul className="space-y-1.5 max-h-48 overflow-y-auto">
-          {drafts.map((d) => (
-            <li
-              key={d.id}
-              className="flex items-center gap-2 px-2 py-1.5 bg-slate-50 rounded border border-slate-200 group"
-            >
+        <>
+          {/* Batch print toolbar — only visible once something's selected */}
+          {selectedCount > 0 && (
+            <div className="mb-2 p-2 bg-emerald-50 border border-emerald-200 rounded">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-emerald-900">
+                  {selectedCount} selected{overBatch ? ` (max ${batchLimit})` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="text-[10px] text-emerald-700 underline"
+                >
+                  Clear
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => onLoad(d.payload)}
-                className="flex-1 text-left min-w-0"
-                title="Load this draft"
+                onClick={handlePrintBatch}
+                className={`w-full px-3 py-1.5 text-sm font-semibold rounded transition ${
+                  overBatch
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                }`}
               >
-                <div className="text-sm font-medium text-slate-800 truncate group-hover:text-blue-600">
-                  {d.name}
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  {new Date(d.updated_at).toLocaleString()}
-                </div>
+                {overBatch
+                  ? `★ Upgrade to print ${selectedCount}`
+                  : `🖨 Print ${selectedCount} selected`}
               </button>
+              {tier === "free" && (
+                <p className="text-[10px] text-emerald-800 mt-1">
+                  Free batch limit: {batchLimit} students per print.
+                </p>
+              )}
+            </div>
+          )}
+
+          {drafts.length > 1 && (
+            <div className="flex justify-end mb-1.5">
               <button
                 type="button"
-                onClick={() => onDelete(d.id)}
-                className="text-slate-400 hover:text-red-600 text-sm px-1"
-                aria-label="Delete draft"
-                title="Delete"
+                onClick={selectedCount === drafts.length ? clearSelection : selectAll}
+                className="text-[10px] text-blue-600 underline"
               >
-                ×
+                {selectedCount === drafts.length ? "Deselect all" : "Select all"}
               </button>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+
+          <ul className="space-y-1.5 max-h-48 overflow-y-auto">
+            {drafts.map((d) => {
+              const isChecked = selected.has(d.id);
+              return (
+                <li
+                  key={d.id}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded border transition ${
+                    isChecked
+                      ? "bg-emerald-50 border-emerald-300"
+                      : "bg-slate-50 border-slate-200"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggle(d.id)}
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer flex-shrink-0"
+                    aria-label={`Select ${d.name} for batch print`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onLoad(d.payload)}
+                    className="flex-1 text-left min-w-0"
+                    title="Load this draft into the editor"
+                  >
+                    <div className="text-sm font-medium text-slate-800 truncate hover:text-blue-600">
+                      {d.name}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {new Date(d.updated_at).toLocaleString()}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(d.id)}
+                    className="text-slate-400 hover:text-red-600 text-sm px-1 flex-shrink-0"
+                    aria-label="Delete draft"
+                    title="Delete"
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {selectedDrafts.length > 0 && (
+            <p className="text-[10px] text-slate-500 mt-2 italic">
+              Tick the box to include a draft in the next batch print.
+            </p>
+          )}
+        </>
       )}
 
       {showSave && (

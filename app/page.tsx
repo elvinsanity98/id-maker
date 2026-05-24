@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import IDForm from "./components/IDForm";
 import IDPreview from "./components/IDPreview";
 import UserMenu from "./components/UserMenu";
@@ -10,6 +10,8 @@ import {
   DEFAULT_DATA,
   PALETTES,
   defaultPalette,
+  payloadToConfig,
+  type CardConfig,
   type CardData,
   type CardSide,
   type CardSize,
@@ -26,10 +28,12 @@ export default function Home() {
   const [view, setView] = useState<CardSide | "both">("front");
   const [copies, setCopies] = useState<number>(1);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  // When non-null we're in "print batch" mode: the preview ignores the
+  // single-card editor state and renders these resolved configs instead.
+  const [batchConfigs, setBatchConfigs] = useState<CardConfig[] | null>(null);
 
   const handleTemplateChange = (t: TemplateId) => {
     setTemplate(t);
-    // Each template has its own palette options; fall back to that template's first palette.
     setPalette(defaultPalette(t));
   };
 
@@ -51,6 +55,40 @@ export default function Home() {
     const nextSize = CARD_SIZES.find((s) => s.id === payload.sizeId) ?? CARD_SIZES[1];
     setSize(nextSize);
   }, []);
+
+  // Resolve the currently-editing config (used in single-card mode).
+  const currentConfig: CardConfig = useMemo(
+    () => ({ data, size, template, palette }),
+    [data, size, template, palette]
+  );
+
+  // What the preview actually renders. In batch mode it's the array of
+  // selected drafts; otherwise it's the current card repeated `copies` times.
+  const renderConfigs: CardConfig[] = useMemo(() => {
+    if (batchConfigs) return batchConfigs;
+    return Array(Math.max(1, copies)).fill(currentConfig);
+  }, [batchConfigs, copies, currentConfig]);
+
+  // When the user kicks off a batch print, resolve each payload to a full
+  // CardConfig, set the batch state, then trigger the browser print once
+  // React has rendered the new card list. Clear the batch state when the
+  // print dialog closes.
+  const handlePrintBatch = useCallback((payloads: DraftPayload[]) => {
+    if (payloads.length === 0) return;
+    const resolved = payloads.map(payloadToConfig);
+    setBatchConfigs(resolved);
+    setView("both");
+  }, []);
+
+  useEffect(() => {
+    if (!batchConfigs) return;
+    // Wait one frame for the new cards to land in the DOM before printing.
+    const t = setTimeout(() => {
+      window.print();
+      setBatchConfigs(null);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [batchConfigs]);
 
   const handlePrint = () => window.print();
   const handleReset = () => {
@@ -75,7 +113,6 @@ export default function Home() {
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-4 sm:gap-6 p-3 sm:p-6 max-w-[1500px] w-full mx-auto items-start">
-        {/* On mobile the preview appears first so the user sees the card + controls immediately. */}
         <div className="order-2 lg:order-1">
           <IDForm
             data={data}
@@ -90,6 +127,7 @@ export default function Home() {
             setCopies={setCopies}
             draftPayload={draftPayload}
             onLoadDraft={loadDraft}
+            onPrintBatch={handlePrintBatch}
             onPrint={handlePrint}
             onReset={handleReset}
             onUpgradeRequest={() => setUpgradeOpen(true)}
@@ -97,13 +135,10 @@ export default function Home() {
         </div>
         <div className="order-1 lg:order-2">
           <IDPreview
-            data={data}
-            size={size}
-            template={template}
-            palette={palette}
+            configs={renderConfigs}
             view={view}
             setView={setView}
-            copies={copies}
+            isBatch={batchConfigs !== null}
             onUpgradeRequest={() => setUpgradeOpen(true)}
           />
         </div>

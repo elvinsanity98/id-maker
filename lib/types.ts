@@ -132,6 +132,23 @@ export type DraftRow = {
   updated_at: string;
 };
 
+/** A resolved set of rendering inputs for one card slot. */
+export type CardConfig = {
+  data: CardData;
+  size: CardSize;
+  template: TemplateId;
+  palette: ColorPalette;
+};
+
+/** Resolve a serialized DraftPayload back into live render inputs. */
+export function payloadToConfig(payload: DraftPayload): CardConfig {
+  const template = payload.templateId;
+  const palette =
+    PALETTES[template].find((p) => p.id === payload.paletteId) ?? defaultPalette(template);
+  const size = CARD_SIZES.find((s) => s.id === payload.sizeId) ?? CARD_SIZES[1];
+  return { data: payload.data, size, template, palette };
+}
+
 export type CardSide = "front" | "back";
 
 export const DEFAULT_DATA: CardData = {
