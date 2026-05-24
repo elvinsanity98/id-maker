@@ -36,7 +36,7 @@ function Front({ data }: { data: CardData }) {
         {data.logo && (
           <div
             className="absolute flex items-center justify-center"
-            style={{ top: "1em", right: "1em", width: "2.8em", height: "2.8em" }}
+            style={{ top: "0.9em", right: "1em", width: "3.6em", height: "3.6em" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -54,11 +54,11 @@ function Front({ data }: { data: CardData }) {
         </div>
         <h2
           className="font-extrabold leading-tight"
-          style={{ fontSize: "1.3em", marginTop: "0.2em", color: "#0f172a", paddingRight: data.logo ? "3.4em" : 0 }}
+          style={{ fontSize: "1.1em", marginTop: "0.2em", color: "#0f172a", paddingRight: data.logo ? "4.2em" : 0 }}
         >
           {data.schoolName}
         </h2>
-        <p style={{ fontSize: "0.8em", color: "#64748b", marginTop: "0.15em", paddingRight: data.logo ? "3.4em" : 0 }}>
+        <p style={{ fontSize: "0.7em", color: "#64748b", marginTop: "0.15em", paddingRight: data.logo ? "4.2em" : 0 }}>
           {data.slogan}
         </p>
       </div>
@@ -67,8 +67,8 @@ function Front({ data }: { data: CardData }) {
         <div
           className="relative overflow-hidden bg-slate-100 flex items-center justify-center"
           style={{
-            width: "11.5em",
-            height: "11.5em",
+            width: "13em",
+            height: "13em",
             borderRadius: "8px",
             border: "1px solid #e2e8f0",
           }}
@@ -162,7 +162,7 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
             <img
               src={data.logo}
               alt="logo"
-              style={{ height: "2.2em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
+              style={{ height: "2.8em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
             />
           ) : (
             <div className="font-extrabold" style={{ fontSize: "1.05em", color: "#0f172a" }}>
@@ -196,10 +196,10 @@ function MinInfo({
     <div
       className="flex"
       style={{
-        marginBottom: "0.4em",
-        fontSize: "0.85em",
+        marginBottom: "0.35em",
+        fontSize: "0.74em",
         lineHeight: 1.5,
-        paddingBottom: "0.3em",
+        paddingBottom: "0.28em",
         borderBottom: "1px solid #f1f5f9",
       }}
     >

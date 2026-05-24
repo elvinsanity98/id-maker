@@ -58,6 +58,10 @@ export default function Home() {
           />
         </div>
       </main>
+
+      <footer className="no-print mt-auto py-4 px-6 text-center text-xs text-slate-500 border-t border-slate-200 bg-white">
+        Developed by <span className="font-semibold text-slate-700">Elvin Jhon</span>
+      </footer>
     </>
   );
 }

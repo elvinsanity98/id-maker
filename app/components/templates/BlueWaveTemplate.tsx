@@ -39,7 +39,7 @@ function Front({ data }: { data: CardData }) {
         {data.logo && (
           <div
             className="absolute flex items-center justify-center"
-            style={{ top: "0.7em", left: "0.7em", width: "2.8em", height: "2.8em", zIndex: 2 }}
+            style={{ top: "0.7em", left: "0.7em", width: "3.6em", height: "3.6em", zIndex: 2 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -50,10 +50,10 @@ function Front({ data }: { data: CardData }) {
           </div>
         )}
         <div className="relative text-center" style={{ padding: "1.6em 1em 0" }}>
-          <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.45em", letterSpacing: "0.5px" }}>
+          <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.25em", letterSpacing: "0.5px" }}>
             {data.schoolName}
           </h2>
-          <p style={{ fontSize: "1em", letterSpacing: "1px", marginTop: "0.3em", opacity: 0.95 }}>
+          <p style={{ fontSize: "0.85em", letterSpacing: "1px", marginTop: "0.3em", opacity: 0.95 }}>
             {data.slogan}
           </p>
         </div>
@@ -61,9 +61,9 @@ function Front({ data }: { data: CardData }) {
         <div
           className="absolute left-1/2 -translate-x-1/2 overflow-hidden flex items-center justify-center bg-slate-200"
           style={{
-            bottom: "-2.8em",
-            width: "10.5em",
-            height: "10.5em",
+            bottom: "-3.3em",
+            width: "12.5em",
+            height: "12.5em",
             borderRadius: "50%",
             border: "0.35em solid #1e3a8a",
             zIndex: 3,
@@ -81,7 +81,7 @@ function Front({ data }: { data: CardData }) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex flex-col justify-center" style={{ padding: "5em 1.3em 1em" }}>
+      <div className="flex-1 flex flex-col justify-center" style={{ padding: "6em 1.3em 1em" }}>
         <InfoRow label="LRN" value={data.lrn} />
         <InfoRow label="Student Name" value={data.studentName} />
         <InfoRow label="Father/ Guardian" value={data.guardian} />
@@ -156,7 +156,7 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
               <img
                 src={data.logo}
                 alt="logo"
-                style={{ height: "2.4em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
+                style={{ height: "3em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
               />
             ) : (
               <div className="font-extrabold" style={{ fontSize: "1.2em", letterSpacing: "0.5px" }}>
@@ -178,7 +178,7 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex" style={{ marginBottom: "0.5em", fontSize: "0.95em", lineHeight: 1.5 }}>
+    <div className="flex" style={{ marginBottom: "0.45em", fontSize: "0.82em", lineHeight: 1.5 }}>
       <span className="font-semibold text-slate-800" style={{ flex: "0 0 45%" }}>
         {label}
       </span>

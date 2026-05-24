@@ -45,7 +45,7 @@ function Front({ data }: { data: CardData }) {
         {data.logo && (
           <div
             className="absolute flex items-center justify-center"
-            style={{ top: "0.6em", left: "0.7em", width: "2.6em", height: "2.6em" }}
+            style={{ top: "0.5em", left: "0.7em", width: "3.4em", height: "3.4em" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -55,10 +55,10 @@ function Front({ data }: { data: CardData }) {
             />
           </div>
         )}
-        <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.35em", letterSpacing: "1px" }}>
+        <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.15em", letterSpacing: "1px" }}>
           {data.schoolName}
         </h2>
-        <p style={{ fontSize: "0.85em", letterSpacing: "2px", marginTop: "0.2em", opacity: 0.85 }}>
+        <p style={{ fontSize: "0.72em", letterSpacing: "2px", marginTop: "0.2em", opacity: 0.85 }}>
           {data.slogan}
         </p>
       </div>
@@ -71,8 +71,8 @@ function Front({ data }: { data: CardData }) {
         <div
           className="relative overflow-hidden bg-slate-700 flex items-center justify-center"
           style={{
-            width: "11.5em",
-            height: "11.5em",
+            width: "13em",
+            height: "13em",
             border: `0.25em solid ${GOLD}`,
             borderRadius: "4px",
           }}
@@ -173,7 +173,7 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
             <img
               src={data.logo}
               alt="logo"
-              style={{ height: "2.2em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
+              style={{ height: "2.8em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
             />
           ) : (
             <div className="font-extrabold" style={{ fontSize: "1.15em", letterSpacing: "1px" }}>
@@ -197,10 +197,10 @@ function DarkInfoRow({ label, value, accent }: { label: string; value: string; a
     <div
       className="flex"
       style={{
-        marginBottom: "0.45em",
-        fontSize: "0.9em",
+        marginBottom: "0.4em",
+        fontSize: "0.78em",
         lineHeight: 1.5,
-        paddingBottom: "0.35em",
+        paddingBottom: "0.3em",
         borderBottom: `1px solid ${GOLD}30`,
       }}
     >
