@@ -5,6 +5,11 @@ import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "./AuthProvider";
 import { supabase } from "@/lib/supabase";
 
+// If you drop a PNG/JPG of your real GCash/InstaPay receive QR at
+// public/gcash-qr.png it gets used directly; otherwise we render a
+// best-effort placeholder QR from the recipient details.
+const QR_IMAGE_PATH = "/gcash-qr.png";
+
 type Tab = "pay" | "key";
 
 const PRICE = process.env.NEXT_PUBLIC_PREMIUM_PRICE_PHP || "500";
@@ -30,6 +35,7 @@ export default function UpgradeModal({
   const [submitting, setSubmitting] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [qrImageOk, setQrImageOk] = useState(true);
 
   if (!open) return null;
 
@@ -134,8 +140,20 @@ export default function UpgradeModal({
             {tab === "pay" && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-                  <div className="bg-white p-2 border-2 border-blue-600 rounded">
-                    <QRCodeSVG value={qrData} size={140} level="M" />
+                  <div className="bg-white p-2 border-2 border-blue-600 rounded shrink-0">
+                    {qrImageOk ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={QR_IMAGE_PATH}
+                        alt="GCash receive QR"
+                        width={160}
+                        height={160}
+                        style={{ width: 160, height: 160, objectFit: "contain", display: "block" }}
+                        onError={() => setQrImageOk(false)}
+                      />
+                    ) : (
+                      <QRCodeSVG value={qrData} size={160} level="M" />
+                    )}
                   </div>
                   <div className="text-sm text-slate-700 space-y-1">
                     <div>
@@ -148,11 +166,10 @@ export default function UpgradeModal({
                     </div>
                     <div>
                       <span className="text-slate-500">Amount:</span>{" "}
-                      <span className="font-semibold">₱{PRICE}</span>
+                      <span className="font-bold text-amber-900">₱{PRICE}</span>
                     </div>
                     <div className="text-xs text-slate-500 pt-2">
-                      The QR encodes the payment hint above. Scan with the GCash app or send
-                      manually to the number.
+                      Scan with your GCash app (InstaPay-compatible) or send manually to the number.
                     </div>
                   </div>
                 </div>
