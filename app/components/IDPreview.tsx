@@ -27,14 +27,10 @@ export default function IDPreview({ data, size, template, view, setView }: Props
 
       <div className="print-area flex justify-center items-center gap-6 flex-wrap p-8 bg-slate-50 rounded-lg min-h-[500px]">
         {showFront && (
-          <div className={!showBack && view !== "both" ? "" : ""}>
-            <TemplateCard data={data} size={size} template={template} side="front" />
-          </div>
+          <TemplateCard data={data} size={size} template={template} side="front" />
         )}
         {showBack && (
-          <div>
-            <TemplateCard data={data} size={size} template={template} side="back" />
-          </div>
+          <TemplateCard data={data} size={size} template={template} side="back" />
         )}
       </div>
     </section>
