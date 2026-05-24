@@ -3,6 +3,7 @@
 import { ChangeEvent } from "react";
 import type { CardData, CardSize, ColorPalette, TemplateId } from "@/lib/types";
 import { CARD_SIZES, PALETTES, TEMPLATES } from "@/lib/types";
+import { useAuth, type Tier } from "./AuthProvider";
 
 type Props = {
   data: CardData;
@@ -15,7 +16,20 @@ type Props = {
   setPalette: (p: ColorPalette) => void;
   onPrint: () => void;
   onReset: () => void;
+  onUpgradeRequest: () => void;
 };
+
+// Anything not in this list requires Premium.
+const FREE_TEMPLATES: TemplateId[] = ["blue-wave"];
+
+function isTemplateFree(id: TemplateId): boolean {
+  return FREE_TEMPLATES.includes(id);
+}
+
+function isPaletteFree(template: TemplateId, paletteId: string): boolean {
+  // Each template's first palette is the free default.
+  return PALETTES[template][0]?.id === paletteId;
+}
 
 export default function IDForm({
   data,
@@ -28,7 +42,11 @@ export default function IDForm({
   setPalette,
   onPrint,
   onReset,
+  onUpgradeRequest,
 }: Props) {
+  const { tier } = useAuth();
+  const isPremium = tier === "premium";
+
   const update = (key: keyof CardData) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
     setData((prev) => ({ ...prev, [key]: value }));
@@ -47,36 +65,71 @@ export default function IDForm({
   const removeFile = (key: "photo" | "logo") => () =>
     setData((prev) => ({ ...prev, [key]: null }));
 
+  const tryPickTemplate = (t: TemplateId) => {
+    if (!isPremium && !isTemplateFree(t)) {
+      onUpgradeRequest();
+      return;
+    }
+    setTemplate(t);
+  };
+
+  const tryPickPalette = (p: ColorPalette) => {
+    if (!isPremium && !isPaletteFree(template, p.id)) {
+      onUpgradeRequest();
+      return;
+    }
+    setPalette(p);
+  };
+
   return (
     <aside className="no-print bg-white rounded-xl shadow-sm p-4 sm:p-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
       <Section title="Template">
         <div className="grid grid-cols-1 gap-2">
-          {TEMPLATES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTemplate(t.id)}
-              className={`text-left px-3 py-2 rounded-md border transition ${
-                template === t.id
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              <div className="font-semibold text-sm">{t.label}</div>
-              <div className={`text-xs ${template === t.id ? "text-blue-100" : "text-slate-500"}`}>
-                {t.description}
-              </div>
-            </button>
-          ))}
+          {TEMPLATES.map((t) => {
+            const locked = !isPremium && !isTemplateFree(t.id);
+            const active = template === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => tryPickTemplate(t.id)}
+                className={`relative text-left px-3 py-2 rounded-md border transition ${
+                  active
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : locked
+                    ? "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold text-sm flex-1">{t.label}</div>
+                  {locked && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                      ★ Premium
+                    </span>
+                  )}
+                </div>
+                <div className={`text-xs ${active ? "text-blue-100" : "text-slate-500"}`}>
+                  {t.description}
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
-            Color palette
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-between">
+            <span>Color palette</span>
+            {!isPremium && (
+              <span className="text-[10px] font-bold text-amber-700 normal-case">
+                ★ Premium for more colors
+              </span>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap items-center">
             {PALETTES[template].map((p) => {
               const isActive = palette.id === p.id;
+              const locked = !isPremium && !isPaletteFree(template, p.id);
               const swatchBg = p.gradientFrom
                 ? `linear-gradient(135deg, ${p.gradientFrom} 0%, ${p.gradientTo} 100%)`
                 : `linear-gradient(135deg, ${p.primary} 0%, ${p.secondary} 100%)`;
@@ -84,16 +137,22 @@ export default function IDForm({
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setPalette(p)}
-                  title={p.label}
+                  onClick={() => tryPickPalette(p)}
+                  title={locked ? `${p.label} — Premium` : p.label}
                   aria-label={p.label}
-                  className={`w-8 h-8 rounded-full transition border-2 ${
+                  className={`relative w-8 h-8 rounded-full transition border-2 ${
                     isActive
                       ? "border-slate-900 ring-2 ring-offset-2 ring-slate-400 scale-110"
                       : "border-white shadow hover:scale-110"
-                  }`}
+                  } ${locked ? "opacity-60" : ""}`}
                   style={{ background: swatchBg }}
-                />
+                >
+                  {locked && (
+                    <span className="absolute inset-0 flex items-center justify-center text-white text-[11px] drop-shadow">
+                      🔒
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
@@ -141,7 +200,13 @@ export default function IDForm({
         )}
       </Section>
 
-      <Section title="School Logo">
+      <PremiumGate
+        tier={tier}
+        title="School Logo"
+        badgeText="★ Premium"
+        onUpgradeRequest={onUpgradeRequest}
+        lockedDescription="Upload a school logo (PNG with transparency supported) to brand the front and back of the card."
+      >
         <p className="text-[11px] text-slate-500 mb-2 -mt-1">
           PNG with transparent background recommended. Also accepts JPG / SVG.
         </p>
@@ -178,7 +243,7 @@ export default function IDForm({
             </button>
           </div>
         )}
-      </Section>
+      </PremiumGate>
 
       <Section title="Student Information (Front)">
         <Field label="LRN" value={data.lrn} onChange={update("lrn")} />
@@ -238,6 +303,44 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className="mb-5 pb-4 border-b border-slate-100 last:border-0">
       <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">{title}</h3>
       {children}
+    </div>
+  );
+}
+
+function PremiumGate({
+  tier,
+  title,
+  badgeText,
+  onUpgradeRequest,
+  lockedDescription,
+  children,
+}: {
+  tier: Tier;
+  title: string;
+  badgeText: string;
+  onUpgradeRequest: () => void;
+  lockedDescription: string;
+  children: React.ReactNode;
+}) {
+  if (tier === "premium") {
+    return <Section title={title}>{children}</Section>;
+  }
+  return (
+    <div className="mb-5 pb-4 border-b border-slate-100">
+      <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 flex items-center justify-between">
+        <span>{title}</span>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+          {badgeText}
+        </span>
+      </h3>
+      <button
+        type="button"
+        onClick={onUpgradeRequest}
+        className="w-full p-3 text-left rounded-md border border-dashed border-amber-300 bg-amber-50/40 hover:bg-amber-50 transition"
+      >
+        <div className="text-xs text-slate-600 mb-2">{lockedDescription}</div>
+        <div className="text-xs text-amber-800 font-semibold">→ Unlock with Premium</div>
+      </button>
     </div>
   );
 }

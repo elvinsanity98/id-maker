@@ -5,6 +5,7 @@ import BlueWaveTemplate from "./templates/BlueWaveTemplate";
 import DarkGoldTemplate from "./templates/DarkGoldTemplate";
 import MinimalTemplate from "./templates/MinimalTemplate";
 import ModernGradientTemplate from "./templates/ModernGradientTemplate";
+import { useAuth } from "./AuthProvider";
 
 type Props = {
   data: CardData;
@@ -16,6 +17,8 @@ type Props = {
 };
 
 export default function IDPreview({ data, size, template, palette, view, setView }: Props) {
+  const { tier } = useAuth();
+  const showWatermark = tier === "free";
   const showFront = view === "front" || view === "both";
   const showBack = view === "back" || view === "both";
 
@@ -29,13 +32,63 @@ export default function IDPreview({ data, size, template, palette, view, setView
 
       <div className="print-area flex justify-center items-center gap-4 sm:gap-6 flex-wrap p-3 sm:p-8 bg-slate-50 rounded-lg min-h-[340px] sm:min-h-[500px] overflow-x-auto">
         {showFront && (
-          <TemplateCard data={data} size={size} template={template} palette={palette} side="front" />
+          <CardWithWatermark side="front" showWatermark={false}>
+            <TemplateCard
+              data={data}
+              size={size}
+              template={template}
+              palette={palette}
+              side="front"
+            />
+          </CardWithWatermark>
         )}
         {showBack && (
-          <TemplateCard data={data} size={size} template={template} palette={palette} side="back" />
+          <CardWithWatermark side="back" showWatermark={showWatermark}>
+            <TemplateCard
+              data={data}
+              size={size}
+              template={template}
+              palette={palette}
+              side="back"
+            />
+          </CardWithWatermark>
         )}
       </div>
     </section>
+  );
+}
+
+function CardWithWatermark({
+  showWatermark,
+  side,
+  children,
+}: {
+  showWatermark: boolean;
+  side: CardSide;
+  children: React.ReactNode;
+}) {
+  if (!showWatermark) return <>{children}</>;
+  return (
+    <div className="relative" data-side={side}>
+      {children}
+      {/* Free-tier watermark — overlaps the bottom of the back card. */}
+      <div
+        className="absolute left-0 right-0 text-center pointer-events-none"
+        style={{
+          bottom: "0",
+          background: "rgba(255,255,255,0.88)",
+          color: "#475569",
+          fontSize: "9px",
+          padding: "3px 4px",
+          letterSpacing: "1.2px",
+          fontWeight: 600,
+          borderTop: "1px solid #e2e8f0",
+          zIndex: 20,
+        }}
+      >
+        MADE WITH ID MAKER · UPGRADE TO REMOVE
+      </div>
+    </div>
   );
 }
 
