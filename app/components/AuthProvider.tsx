@@ -30,16 +30,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     if (!supabase) return null;
-    const { data, error } = await supabase
+
+    // Fast path: the row exists from the on-signup trigger.
+    const fast = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single();
-    if (error) {
-      console.warn("[auth] profile fetch failed:", error.message);
+      .maybeSingle();
+
+    if (fast.data) return fast.data as Profile;
+    if (fast.error) console.warn("[auth] profile fetch failed:", fast.error.message);
+
+    // Slow path: backfill via SECURITY DEFINER RPC. Handles users who
+    // signed up before the on-signup trigger was installed.
+    const ensured = await supabase.rpc("ensure_profile");
+    if (ensured.error) {
+      console.warn("[auth] ensure_profile failed:", ensured.error.message);
       return null;
     }
-    return data as Profile;
+    return ensured.data as Profile;
   }, []);
 
   const refresh = useCallback(async () => {
@@ -47,24 +56,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoaded(true);
       return;
     }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const profile = await fetchProfile(session.user.id);
-      setUser(profile);
-    } else {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id);
+        setUser(profile);
+      } else {
+        setUser(null);
+      }
+    } catch (err) {
+      console.error("[auth] refresh failed:", err);
       setUser(null);
+    } finally {
+      // Always flip loaded so the UI never gets stuck on the loading state.
+      setLoaded(true);
     }
-    setLoaded(true);
   }, [fetchProfile]);
 
   useEffect(() => {
     refresh();
     if (!supabase) return;
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id);
-        setUser(profile);
-      } else {
+      try {
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("[auth] state-change handler failed:", err);
         setUser(null);
       }
     });
