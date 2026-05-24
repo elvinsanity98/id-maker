@@ -26,11 +26,11 @@ const KEY_REGEX = new RegExp(
   `^${PREFIX}-[${ALPHABET}]{4}-[${ALPHABET}]{4}-[${ALPHABET}]{4}-[${ALPHABET}]{4}$`
 );
 
-// Demo / launch promo codes. Keep small; treat like a coupon list.
-const PROMO_KEYS: ReadonlySet<string> = new Set([
-  "IDMK-DEMO-2026-FREE-TEST",
-  "IDMK-LAUN-CHPR-OMO0-2026",
-]);
+// Promo / launch codes. Treat like a coupon list — anything here unlocks
+// premium without payment, so keep it empty for production unless you're
+// running a campaign. Real buyers should always get HMAC-validated keys
+// minted via generateLicense().
+const PROMO_KEYS: ReadonlySet<string> = new Set([]);
 
 export async function validateLicense(raw: string): Promise<boolean> {
   const key = raw.trim().toUpperCase();

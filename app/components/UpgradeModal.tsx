@@ -269,9 +269,6 @@ export default function UpgradeModal({
                     Sign in first — we activate Premium on your account, not on this device.
                   </div>
                 )}
-                <div className="text-[11px] text-slate-400 text-center pt-2">
-                  Demo key for testing: <code>IDMK-DEMO-2026-FREE-TEST</code>
-                </div>
               </form>
             )}
           </>
