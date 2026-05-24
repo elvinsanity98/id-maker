@@ -43,7 +43,7 @@ export default function IDForm({
   const removePhoto = () => setData((prev) => ({ ...prev, photo: null }));
 
   return (
-    <aside className="no-print bg-white rounded-xl shadow-sm p-5 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+    <aside className="no-print bg-white rounded-xl shadow-sm p-4 sm:p-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
       <Section title="Template">
         <div className="grid grid-cols-1 gap-2">
           {TEMPLATES.map((t) => (
