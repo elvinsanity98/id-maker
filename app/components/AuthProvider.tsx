@@ -73,10 +73,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp: AuthContextValue["signUp"] = useCallback(async (email, password, fullName) => {
     if (!supabase) return { error: "Auth is not configured. Add Supabase env vars." };
+    // Use the origin the user signed up from so the confirmation email
+    // returns them to the same deployment (localhost in dev, Vercel in
+    // prod). Without this Supabase falls back to its Site URL setting,
+    // which defaults to localhost:3000 — fine for testing, wrong in prod.
+    const emailRedirectTo =
+      typeof window !== "undefined" ? window.location.origin : undefined;
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: {
+        data: { full_name: fullName },
+        emailRedirectTo,
+      },
     });
     if (error) return { error: error.message };
     await refresh();
