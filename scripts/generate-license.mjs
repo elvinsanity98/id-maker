@@ -3,11 +3,15 @@
  * Mint license keys for the ID Card Maker.
  *
  * Usage:
- *   node scripts/generate-license.mjs            # one key
- *   node scripts/generate-license.mjs 5          # five keys
+ *   node scripts/generate-license.mjs                 # 1 key, plain
+ *   node scripts/generate-license.mjs 5               # 5 keys, plain
+ *   node scripts/generate-license.mjs 5 --sql         # 5 keys + INSERT statements
+ *   node scripts/generate-license.mjs 5 --sql --note "Launch promo"
  *
- * The SECRET must match the one in lib/license.ts. If you rotate it,
- * every previously-issued key stops validating.
+ * Keys are HMAC-checksummed with the same SECRET as lib/license.ts. After
+ * minting, paste the SQL output into your Supabase SQL Editor to register
+ * them in the license_keys table — until they're inserted there, the
+ * activate_license_key RPC will reject them as "not recognized".
  */
 import { createHmac, randomBytes } from "node:crypto";
 
@@ -30,5 +34,24 @@ function mintOne() {
   return `${payload}-${checksum}`;
 }
 
-const count = Math.max(1, Math.min(1000, parseInt(process.argv[2] || "1", 10) || 1));
-for (let i = 0; i < count; i++) console.log(mintOne());
+// Crude arg parser: number is the count, everything else is a flag.
+const args = process.argv.slice(2);
+const sqlMode = args.includes("--sql");
+const noteIdx = args.indexOf("--note");
+const note = noteIdx !== -1 ? args[noteIdx + 1] : null;
+const numArg = args.find((a) => /^\d+$/.test(a));
+const count = Math.max(1, Math.min(1000, parseInt(numArg || "1", 10)));
+
+const keys = Array.from({ length: count }, mintOne);
+
+if (sqlMode) {
+  console.log("-- Paste into Supabase SQL Editor:");
+  console.log("INSERT INTO public.license_keys (key, notes) VALUES");
+  console.log(
+    keys
+      .map((k, i) => `  ('${k}', ${note ? `'${note.replace(/'/g, "''")}'` : "NULL"})${i === keys.length - 1 ? ";" : ","}`)
+      .join("\n")
+  );
+} else {
+  for (const k of keys) console.log(k);
+}

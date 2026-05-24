@@ -109,18 +109,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const activateLicense: AuthContextValue["activateLicense"] = useCallback(async (rawKey) => {
     if (!supabase || !user) return { error: "Please sign in before activating a license." };
     const key = rawKey.trim().toUpperCase();
-    const ok = await validateLicense(key);
-    if (!ok) return { error: "That license key isn't valid. Double-check the format." };
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        tier: "premium",
-        license_key: key,
-        activated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    // 1. Fast client-side format/HMAC sanity check — avoids round-tripping
+    //    obvious garbage to the database.
+    const ok = await validateLicense(key);
+    if (!ok) return { error: "That license key isn't a valid format." };
+
+    // 2. Atomic redeem on the server. The RPC enforces one-account-per-key:
+    //    it checks the key exists, isn't revoked, isn't already claimed by
+    //    a different account, then flips status='used' and bumps the
+    //    caller's profile to premium — all in one transaction.
+    const { data, error } = await supabase.rpc("activate_license_key", { input_key: key });
     if (error) return { error: error.message };
+
+    const result = data as { ok: boolean; message: string } | null;
+    if (!result) return { error: "Unexpected empty response from server." };
+    if (!result.ok) return { error: result.message };
+
     await refresh();
     return {};
   }, [user, refresh]);
