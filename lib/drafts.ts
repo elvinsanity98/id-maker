@@ -48,6 +48,24 @@ export async function updateDraft(
   return {};
 }
 
+/**
+ * Rename a draft without touching its payload. Useful when the active
+ * draft has unsaved form changes — renaming should NOT clobber the user's
+ * in-progress edits, only relabel the row.
+ */
+export async function renameDraft(
+  id: string,
+  name: string
+): Promise<{ error?: string }> {
+  if (!supabase) return { error: "Supabase not configured." };
+  const { error } = await supabase
+    .from("drafts")
+    .update({ name: name.trim() || "Untitled" })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function deleteDraft(id: string): Promise<{ error?: string }> {
   if (!supabase) return { error: "Supabase not configured." };
   const { error } = await supabase.from("drafts").delete().eq("id", id);

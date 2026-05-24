@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
-import { deleteDraft, listDrafts, saveDraft, updateDraft } from "@/lib/drafts";
+import { deleteDraft, listDrafts, renameDraft, saveDraft, updateDraft } from "@/lib/drafts";
 import { TIER_LIMITS, type DraftPayload, type DraftRow } from "@/lib/types";
 
 /** The draft currently being edited (loaded into the form). */
@@ -38,6 +38,10 @@ export default function DraftsPanel({
   const [draftName, setDraftName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [savedHint, setSavedHint] = useState<string | null>(null);
+  // Inline-rename state: which row is currently in rename mode + the
+  // unsaved input text. null = no row is being renamed.
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const limit = TIER_LIMITS[tier].maxDrafts;
   const batchLimit = TIER_LIMITS[tier].maxCopies;
@@ -164,6 +168,36 @@ export default function DraftsPanel({
     setSelected(new Set());
     setActiveDraft({ id: draft.id, name: draft.name });
     onLoad(draft.payload);
+  };
+
+  const startRename = (d: DraftRow) => {
+    setRenamingId(d.id);
+    setRenameValue(d.name);
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue("");
+  };
+
+  const submitRename = async (d: DraftRow) => {
+    const next = renameValue.trim();
+    if (!next || next === d.name) {
+      cancelRename();
+      return;
+    }
+    const { error: err } = await renameDraft(d.id, next);
+    if (err) {
+      alert(err);
+      return;
+    }
+    // Keep the active-draft banner in sync if we just renamed the loaded one.
+    if (activeDraft?.id === d.id) {
+      setActiveDraft({ id: d.id, name: next });
+    }
+    cancelRename();
+    flashSaved(`Renamed to "${next}"`);
+    refresh();
   };
 
   if (!user) {
@@ -311,6 +345,7 @@ export default function DraftsPanel({
             {drafts.map((d) => {
               const isChecked = selected.has(d.id);
               const isActive = activeDraft?.id === d.id;
+              const isRenaming = renamingId === d.id;
               return (
                 <li
                   key={d.id}
@@ -326,40 +361,87 @@ export default function DraftsPanel({
                     type="checkbox"
                     checked={isChecked}
                     onChange={() => toggle(d.id)}
-                    className="w-4 h-4 accent-emerald-600 cursor-pointer flex-shrink-0"
+                    disabled={isRenaming}
+                    className="w-4 h-4 accent-emerald-600 cursor-pointer flex-shrink-0 disabled:opacity-50"
                     aria-label={`Select ${d.name} for batch print`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => handleLoadClick(d)}
-                    className="flex-1 text-left min-w-0"
-                    title="Load this draft into the editor (clears batch selection)"
-                  >
-                    <div
-                      className={`text-sm font-medium truncate hover:text-blue-600 ${
-                        isActive ? "text-blue-700" : "text-slate-800"
-                      }`}
-                    >
-                      {d.name}
-                      {isActive && (
-                        <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
-                          · editing
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-400">
-                      {new Date(d.updated_at).toLocaleString()}
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(d.id)}
-                    className="text-slate-400 hover:text-red-600 text-sm px-1 flex-shrink-0"
-                    aria-label="Delete draft"
-                    title="Delete"
-                  >
-                    ×
-                  </button>
+                  {isRenaming ? (
+                    <>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") submitRename(d);
+                          else if (e.key === "Escape") cancelRename();
+                        }}
+                        className="flex-1 min-w-0 px-2 py-1 text-sm border border-blue-400 rounded bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-label="New name"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitRename(d)}
+                        className="text-emerald-600 hover:text-emerald-800 text-sm font-bold px-1 flex-shrink-0"
+                        title="Save (Enter)"
+                        aria-label="Save rename"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelRename}
+                        className="text-slate-400 hover:text-slate-700 text-sm font-bold px-1 flex-shrink-0"
+                        title="Cancel (Esc)"
+                        aria-label="Cancel rename"
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleLoadClick(d)}
+                        className="flex-1 text-left min-w-0"
+                        title="Load this draft into the editor (clears batch selection)"
+                      >
+                        <div
+                          className={`text-sm font-medium truncate hover:text-blue-600 ${
+                            isActive ? "text-blue-700" : "text-slate-800"
+                          }`}
+                        >
+                          {d.name}
+                          {isActive && (
+                            <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+                              · editing
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {new Date(d.updated_at).toLocaleString()}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startRename(d)}
+                        className="text-slate-400 hover:text-blue-600 text-sm px-1 flex-shrink-0"
+                        aria-label="Rename draft"
+                        title="Rename"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(d.id)}
+                        className="text-slate-400 hover:text-red-600 text-sm px-1 flex-shrink-0"
+                        aria-label="Delete draft"
+                        title="Delete"
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
                 </li>
               );
             })}
