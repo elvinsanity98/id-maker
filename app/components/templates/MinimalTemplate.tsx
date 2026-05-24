@@ -32,7 +32,20 @@ export default function MinimalTemplate({ data, size, side }: Props) {
 function Front({ data }: { data: CardData }) {
   return (
     <>
-      <div style={{ padding: "1.2em 1.2em 0.6em" }}>
+      <div className="relative" style={{ padding: "1.2em 1.2em 0.6em" }}>
+        {data.logo && (
+          <div
+            className="absolute flex items-center justify-center"
+            style={{ top: "1em", right: "1em", width: "2.8em", height: "2.8em" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.logo}
+              alt="logo"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          </div>
+        )}
         <div
           className="font-bold uppercase"
           style={{ fontSize: "0.7em", letterSpacing: "2px", color: ACCENT }}
@@ -41,11 +54,11 @@ function Front({ data }: { data: CardData }) {
         </div>
         <h2
           className="font-extrabold leading-tight"
-          style={{ fontSize: "1.3em", marginTop: "0.2em", color: "#0f172a" }}
+          style={{ fontSize: "1.3em", marginTop: "0.2em", color: "#0f172a", paddingRight: data.logo ? "3.4em" : 0 }}
         >
           {data.schoolName}
         </h2>
-        <p style={{ fontSize: "0.8em", color: "#64748b", marginTop: "0.15em" }}>
+        <p style={{ fontSize: "0.8em", color: "#64748b", marginTop: "0.15em", paddingRight: data.logo ? "3.4em" : 0 }}>
           {data.slogan}
         </p>
       </div>
@@ -145,9 +158,18 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
         style={{ padding: "0.8em 1.2em", borderTop: "1px solid #e2e8f0", gap: "0.8em" }}
       >
         <div className="flex-1">
-          <div className="font-extrabold" style={{ fontSize: "1.05em", color: "#0f172a" }}>
-            {data.logoText}
-          </div>
+          {data.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.logo}
+              alt="logo"
+              style={{ height: "2.2em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
+            />
+          ) : (
+            <div className="font-extrabold" style={{ fontSize: "1.05em", color: "#0f172a" }}>
+              {data.logoText}
+            </div>
+          )}
           <div style={{ fontSize: "0.7em", color: "#64748b", letterSpacing: "0.5px" }}>
             {data.tagline}
           </div>

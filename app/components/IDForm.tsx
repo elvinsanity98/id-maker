@@ -30,17 +30,18 @@ export default function IDForm({
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onPhoto = (e: ChangeEvent<HTMLInputElement>) => {
+  const onFile = (key: "photo" | "logo") => (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      setData((prev) => ({ ...prev, photo: ev.target?.result as string }));
+      setData((prev) => ({ ...prev, [key]: ev.target?.result as string }));
     };
     reader.readAsDataURL(file);
   };
 
-  const removePhoto = () => setData((prev) => ({ ...prev, photo: null }));
+  const removeFile = (key: "photo" | "logo") => () =>
+    setData((prev) => ({ ...prev, [key]: null }));
 
   return (
     <aside className="no-print bg-white rounded-xl shadow-sm p-4 sm:p-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
@@ -92,17 +93,56 @@ export default function IDForm({
         <input
           type="file"
           accept="image/*"
-          onChange={onPhoto}
+          onChange={onFile("photo")}
           className="w-full text-sm cursor-pointer file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer hover:file:bg-blue-700"
         />
         {data.photo && (
           <button
             type="button"
-            onClick={removePhoto}
+            onClick={removeFile("photo")}
             className="text-xs text-blue-600 underline mt-2"
           >
             Remove photo
           </button>
+        )}
+      </Section>
+
+      <Section title="School Logo">
+        <p className="text-[11px] text-slate-500 mb-2 -mt-1">
+          PNG with transparent background recommended. Also accepts JPG / SVG.
+        </p>
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          onChange={onFile("logo")}
+          className="w-full text-sm cursor-pointer file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer hover:file:bg-blue-700"
+        />
+        {data.logo && (
+          <div className="flex items-center gap-3 mt-2">
+            <div
+              className="w-12 h-12 flex items-center justify-center rounded border border-slate-200"
+              style={{
+                backgroundImage:
+                  "linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)",
+                backgroundSize: "10px 10px",
+                backgroundPosition: "0 0, 0 5px, 5px -5px, -5px 0",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={data.logo}
+                alt="logo preview"
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={removeFile("logo")}
+              className="text-xs text-blue-600 underline"
+            >
+              Remove logo
+            </button>
+          </div>
         )}
       </Section>
 

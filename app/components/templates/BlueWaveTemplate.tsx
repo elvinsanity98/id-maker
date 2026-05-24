@@ -36,6 +36,19 @@ function Front({ data }: { data: CardData }) {
           <path d="M0,0 L300,0 L300,175 Q150,225 0,175 Z" fill="#1e3a8a" />
           <path d="M0,0 L300,0 L300,160 Q150,210 0,160 Z" fill="#2563eb" />
         </svg>
+        {data.logo && (
+          <div
+            className="absolute flex items-center justify-center"
+            style={{ top: "0.7em", left: "0.7em", width: "2.8em", height: "2.8em", zIndex: 2 }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.logo}
+              alt="logo"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          </div>
+        )}
         <div className="relative text-center" style={{ padding: "1.6em 1em 0" }}>
           <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.45em", letterSpacing: "0.5px" }}>
             {data.schoolName}
@@ -139,9 +152,18 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
           style={{ padding: "1.4em 1em 0.8em", gap: "0.8em" }}
         >
           <div className="flex-1 text-center" style={{ paddingBottom: "0.3em" }}>
-            <div className="font-extrabold" style={{ fontSize: "1.2em", letterSpacing: "0.5px" }}>
-              {data.logoText}
-            </div>
+            {data.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.logo}
+                alt="logo"
+                style={{ height: "2.4em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
+              />
+            ) : (
+              <div className="font-extrabold" style={{ fontSize: "1.2em", letterSpacing: "0.5px" }}>
+                {data.logoText}
+              </div>
+            )}
             <div style={{ fontSize: "0.75em", opacity: 0.9, letterSpacing: "0.5px", marginTop: "0.15em" }}>
               {data.tagline}
             </div>

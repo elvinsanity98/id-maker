@@ -34,7 +34,7 @@ function Front({ data }: { data: CardData }) {
     <>
       {/* Top gold strip with school name */}
       <div
-        className="text-center"
+        className="relative text-center"
         style={{
           background: `linear-gradient(135deg, ${GOLD} 0%, #b8941f 100%)`,
           color: DARK,
@@ -42,6 +42,19 @@ function Front({ data }: { data: CardData }) {
           borderBottom: `2px solid ${DARK}`,
         }}
       >
+        {data.logo && (
+          <div
+            className="absolute flex items-center justify-center"
+            style={{ top: "0.6em", left: "0.7em", width: "2.6em", height: "2.6em" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.logo}
+              alt="logo"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          </div>
+        )}
         <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.35em", letterSpacing: "1px" }}>
           {data.schoolName}
         </h2>
@@ -156,9 +169,18 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
         }}
       >
         <div className="flex-1">
-          <div className="font-extrabold" style={{ fontSize: "1.15em", letterSpacing: "1px" }}>
-            {data.logoText}
-          </div>
+          {data.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.logo}
+              alt="logo"
+              style={{ height: "2.2em", maxWidth: "100%", objectFit: "contain", display: "inline-block" }}
+            />
+          ) : (
+            <div className="font-extrabold" style={{ fontSize: "1.15em", letterSpacing: "1px" }}>
+              {data.logoText}
+            </div>
+          )}
           <div style={{ fontSize: "0.7em", letterSpacing: "1px", opacity: 0.85 }}>
             {data.tagline}
           </div>
