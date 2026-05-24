@@ -95,6 +95,43 @@ export function defaultPalette(t: TemplateId): ColorPalette {
   return PALETTES[t][0];
 }
 
+// Per-tier limits used by batch print, drafts, and export. Keep in lockstep
+// with the copy in the upgrade modal so users know what they're getting.
+export const TIER_LIMITS = {
+  free: {
+    maxCopies: 6,
+    maxDrafts: 5,
+    exportFormats: ["png"] as const,
+  },
+  premium: {
+    maxCopies: 30,
+    maxDrafts: 50,
+    exportFormats: ["png", "jpeg", "svg"] as const,
+  },
+} as const;
+
+export type ExportFormat = "png" | "jpeg" | "svg";
+
+/**
+ * Everything we serialize into a draft. A draft round-trips the entire
+ * editor state — load one and you continue exactly where you left off.
+ */
+export type DraftPayload = {
+  data: CardData;
+  templateId: TemplateId;
+  paletteId: string;
+  sizeId: string;
+};
+
+export type DraftRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  payload: DraftPayload;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CardSide = "front" | "back";
 
 export const DEFAULT_DATA: CardData = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import IDForm from "./components/IDForm";
 import IDPreview from "./components/IDPreview";
 import UserMenu from "./components/UserMenu";
@@ -8,11 +8,13 @@ import UpgradeModal from "./components/UpgradeModal";
 import {
   CARD_SIZES,
   DEFAULT_DATA,
+  PALETTES,
   defaultPalette,
   type CardData,
   type CardSide,
   type CardSize,
   type ColorPalette,
+  type DraftPayload,
   type TemplateId,
 } from "@/lib/types";
 
@@ -22,6 +24,7 @@ export default function Home() {
   const [template, setTemplate] = useState<TemplateId>("blue-wave");
   const [palette, setPalette] = useState<ColorPalette>(defaultPalette("blue-wave"));
   const [view, setView] = useState<CardSide | "both">("front");
+  const [copies, setCopies] = useState<number>(1);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const handleTemplateChange = (t: TemplateId) => {
@@ -30,10 +33,30 @@ export default function Home() {
     setPalette(defaultPalette(t));
   };
 
+  // Snapshot of everything we'd want to restore when reloading a draft.
+  const draftPayload: DraftPayload = {
+    data,
+    templateId: template,
+    paletteId: palette.id,
+    sizeId: size.id,
+  };
+
+  const loadDraft = useCallback((payload: DraftPayload) => {
+    setData(payload.data);
+    setTemplate(payload.templateId);
+    const nextPalette =
+      PALETTES[payload.templateId].find((p) => p.id === payload.paletteId) ??
+      defaultPalette(payload.templateId);
+    setPalette(nextPalette);
+    const nextSize = CARD_SIZES.find((s) => s.id === payload.sizeId) ?? CARD_SIZES[1];
+    setSize(nextSize);
+  }, []);
+
   const handlePrint = () => window.print();
   const handleReset = () => {
     if (confirm("Reset all fields back to defaults?")) {
       setData(DEFAULT_DATA);
+      setCopies(1);
     }
   };
 
@@ -63,6 +86,10 @@ export default function Home() {
             setTemplate={handleTemplateChange}
             palette={palette}
             setPalette={setPalette}
+            copies={copies}
+            setCopies={setCopies}
+            draftPayload={draftPayload}
+            onLoadDraft={loadDraft}
             onPrint={handlePrint}
             onReset={handleReset}
             onUpgradeRequest={() => setUpgradeOpen(true)}
@@ -76,6 +103,8 @@ export default function Home() {
             palette={palette}
             view={view}
             setView={setView}
+            copies={copies}
+            onUpgradeRequest={() => setUpgradeOpen(true)}
           />
         </div>
       </main>

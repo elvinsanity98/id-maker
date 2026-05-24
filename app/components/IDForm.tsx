@@ -1,9 +1,10 @@
 "use client";
 
 import { ChangeEvent } from "react";
-import type { CardData, CardSize, ColorPalette, TemplateId } from "@/lib/types";
-import { CARD_SIZES, PALETTES, TEMPLATES } from "@/lib/types";
+import type { CardData, CardSize, ColorPalette, DraftPayload, TemplateId } from "@/lib/types";
+import { CARD_SIZES, PALETTES, TEMPLATES, TIER_LIMITS } from "@/lib/types";
 import { useAuth, type Tier } from "./AuthProvider";
+import DraftsPanel from "./DraftsPanel";
 
 type Props = {
   data: CardData;
@@ -14,6 +15,10 @@ type Props = {
   setTemplate: (t: TemplateId) => void;
   palette: ColorPalette;
   setPalette: (p: ColorPalette) => void;
+  copies: number;
+  setCopies: (n: number) => void;
+  draftPayload: DraftPayload;
+  onLoadDraft: (payload: DraftPayload) => void;
   onPrint: () => void;
   onReset: () => void;
   onUpgradeRequest: () => void;
@@ -40,12 +45,17 @@ export default function IDForm({
   setTemplate,
   palette,
   setPalette,
+  copies,
+  setCopies,
+  draftPayload,
+  onLoadDraft,
   onPrint,
   onReset,
   onUpgradeRequest,
 }: Props) {
   const { tier } = useAuth();
   const isPremium = tier === "premium";
+  const maxCopies = TIER_LIMITS[tier].maxCopies;
 
   const update = (key: keyof CardData) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -83,6 +93,14 @@ export default function IDForm({
 
   return (
     <aside className="no-print bg-white rounded-xl shadow-sm p-4 sm:p-5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <Section title="My Drafts">
+        <DraftsPanel
+          currentPayload={draftPayload}
+          onLoad={onLoadDraft}
+          onUpgradeRequest={onUpgradeRequest}
+        />
+      </Section>
+
       <Section title="Template">
         <div className="grid grid-cols-1 gap-2">
           {TEMPLATES.map((t) => {
@@ -167,7 +185,7 @@ export default function IDForm({
             const next = CARD_SIZES.find((s) => s.id === e.target.value);
             if (next) setSize(next);
           }}
-          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           {CARD_SIZES.map((s) => (
             <option key={s.id} value={s.id}>
@@ -175,6 +193,37 @@ export default function IDForm({
             </option>
           ))}
         </select>
+      </Section>
+
+      <Section title="Batch Print">
+        <label className="block text-xs text-slate-600 font-medium">
+          Number of copies (max {maxCopies}{tier === "free" ? " on Free" : ""})
+          <input
+            type="number"
+            min={1}
+            max={maxCopies}
+            value={copies}
+            onChange={(e) => {
+              const raw = parseInt(e.target.value, 10);
+              if (Number.isNaN(raw)) return;
+              if (raw > maxCopies) {
+                onUpgradeRequest();
+                setCopies(maxCopies);
+                return;
+              }
+              setCopies(Math.max(1, raw));
+            }}
+            className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </label>
+        {tier === "free" && (
+          <p className="text-[11px] text-slate-500 mt-2">
+            Need to print more at once?{" "}
+            <button type="button" onClick={onUpgradeRequest} className="text-amber-700 font-bold underline">
+              ★ Premium prints up to 30 per batch
+            </button>
+          </p>
+        )}
       </Section>
 
       <Section title="School / Organization">
