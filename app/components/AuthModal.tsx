@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
 
 type Mode = "signin" | "signup";
@@ -22,6 +22,16 @@ export default function AuthModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  // useState only honors the initialMode prop on first mount; reset whenever
+  // the modal is reopened so "Sign up" in the header actually lands on signup.
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      setError(null);
+      setInfo(null);
+    }
+  }, [open, initialMode]);
 
   if (!open) return null;
 
@@ -84,7 +94,7 @@ export default function AuthModal({
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </label>
           )}
@@ -95,7 +105,7 @@ export default function AuthModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </label>
           <label className="block text-sm">
@@ -106,7 +116,7 @@ export default function AuthModal({
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </label>
 

@@ -201,7 +201,7 @@ export default function UpgradeModal({
                     onChange={(e) => setReference(e.target.value)}
                     required
                     disabled={!user || requestSent}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900 placeholder-slate-400"
                   />
                   <textarea
                     placeholder="Optional notes (sender name, time, etc.)"
@@ -209,7 +209,7 @@ export default function UpgradeModal({
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
                     disabled={!user || requestSent}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900 placeholder-slate-400"
                   />
                   {requestError && (
                     <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
@@ -250,7 +250,7 @@ export default function UpgradeModal({
                   placeholder="IDMK-XXXX-XXXX-XXXX-CCCC"
                   required
                   autoFocus
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md font-mono text-sm uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md font-mono text-sm uppercase tracking-wider bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {activateError && (
                   <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
