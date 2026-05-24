@@ -6,9 +6,11 @@ import IDPreview from "./components/IDPreview";
 import {
   CARD_SIZES,
   DEFAULT_DATA,
+  defaultPalette,
   type CardData,
   type CardSide,
   type CardSize,
+  type ColorPalette,
   type TemplateId,
 } from "@/lib/types";
 
@@ -16,7 +18,14 @@ export default function Home() {
   const [data, setData] = useState<CardData>(DEFAULT_DATA);
   const [size, setSize] = useState<CardSize>(CARD_SIZES[1]); // medium portrait
   const [template, setTemplate] = useState<TemplateId>("blue-wave");
+  const [palette, setPalette] = useState<ColorPalette>(defaultPalette("blue-wave"));
   const [view, setView] = useState<CardSide | "both">("front");
+
+  const handleTemplateChange = (t: TemplateId) => {
+    setTemplate(t);
+    // Each template has its own palette options; fall back to that template's first palette.
+    setPalette(defaultPalette(t));
+  };
 
   const handlePrint = () => window.print();
   const handleReset = () => {
@@ -43,7 +52,9 @@ export default function Home() {
             size={size}
             setSize={setSize}
             template={template}
-            setTemplate={setTemplate}
+            setTemplate={handleTemplateChange}
+            palette={palette}
+            setPalette={setPalette}
             onPrint={handlePrint}
             onReset={handleReset}
           />
@@ -53,6 +64,7 @@ export default function Home() {
             data={data}
             size={size}
             template={template}
+            palette={palette}
             view={view}
             setView={setView}
           />

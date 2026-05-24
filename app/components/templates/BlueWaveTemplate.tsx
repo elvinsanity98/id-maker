@@ -1,15 +1,16 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
-import type { CardData, CardSide, CardSize } from "@/lib/types";
+import type { CardData, CardSide, CardSize, ColorPalette } from "@/lib/types";
 
 type Props = {
   data: CardData;
   size: CardSize;
   side: CardSide;
+  palette: ColorPalette;
 };
 
-export default function BlueWaveTemplate({ data, size, side }: Props) {
+export default function BlueWaveTemplate({ data, size, side, palette }: Props) {
   const cardStyle = {
     width: size.width,
     height: size.height,
@@ -18,12 +19,19 @@ export default function BlueWaveTemplate({ data, size, side }: Props) {
 
   return (
     <div className="id-card" style={cardStyle}>
-      {side === "front" ? <Front data={data} /> : <Back data={data} size={size} />}
+      {side === "front" ? (
+        <Front data={data} palette={palette} />
+      ) : (
+        <Back data={data} size={size} palette={palette} />
+      )}
     </div>
   );
 }
 
-function Front({ data }: { data: CardData }) {
+function Front({ data, palette }: { data: CardData; palette: ColorPalette }) {
+  // When a logo sits in the top-left, the centered school-name needs symmetric
+  // padding so it doesn't slide over the logo and stays visually centered.
+  const headerPadX = data.logo ? "3.6em" : "1em";
   return (
     <>
       {/* Header with wave */}
@@ -33,8 +41,8 @@ function Front({ data }: { data: CardData }) {
           preserveAspectRatio="none"
           className="absolute inset-0 w-full h-full"
         >
-          <path d="M0,0 L300,0 L300,175 Q150,225 0,175 Z" fill="#1e3a8a" />
-          <path d="M0,0 L300,0 L300,160 Q150,210 0,160 Z" fill="#2563eb" />
+          <path d="M0,0 L300,0 L300,175 Q150,225 0,175 Z" fill={palette.secondary} />
+          <path d="M0,0 L300,0 L300,160 Q150,210 0,160 Z" fill={palette.primary} />
         </svg>
         {data.logo && (
           <div
@@ -49,7 +57,7 @@ function Front({ data }: { data: CardData }) {
             />
           </div>
         )}
-        <div className="relative text-center" style={{ padding: "1.6em 1em 0" }}>
+        <div className="relative text-center" style={{ padding: `1.6em ${headerPadX} 0` }}>
           <h2 className="font-extrabold leading-tight" style={{ fontSize: "1.25em", letterSpacing: "0.5px" }}>
             {data.schoolName}
           </h2>
@@ -65,7 +73,7 @@ function Front({ data }: { data: CardData }) {
             width: "12.5em",
             height: "12.5em",
             borderRadius: "50%",
-            border: "0.35em solid #1e3a8a",
+            border: `0.35em solid ${palette.secondary}`,
             zIndex: 3,
           }}
         >
@@ -92,13 +100,27 @@ function Front({ data }: { data: CardData }) {
   );
 }
 
-function Back({ data, size }: { data: CardData; size: CardSize }) {
+function Back({
+  data,
+  size,
+  palette,
+}: {
+  data: CardData;
+  size: CardSize;
+  palette: ColorPalette;
+}) {
   const terms = data.terms.split("|").map((s) => s.trim()).filter(Boolean);
   return (
     <>
       <div
-        className="bg-blue-600 text-white text-center font-bold rounded"
-        style={{ padding: "0.6em 1em", margin: "1em 1.3em 0.8em", fontSize: "1.05em", letterSpacing: "1px" }}
+        className="text-white text-center font-bold rounded"
+        style={{
+          background: palette.primary,
+          padding: "0.6em 1em",
+          margin: "1em 1.3em 0.8em",
+          fontSize: "1.05em",
+          letterSpacing: "1px",
+        }}
       >
         TERMS AND CONDITIONS
       </div>
@@ -110,7 +132,9 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
             className="relative text-slate-600"
             style={{ paddingLeft: "1em", fontSize: "0.7em", lineHeight: 1.45, marginBottom: "0.5em" }}
           >
-            <span className="absolute left-0 text-blue-600 font-bold">•</span>
+            <span className="absolute left-0 font-bold" style={{ color: palette.primary }}>
+              •
+            </span>
             {t}
           </li>
         ))}
@@ -143,8 +167,8 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
           preserveAspectRatio="none"
           className="absolute inset-0 w-full h-full"
         >
-          <path d="M0,40 Q150,-15 300,40 L300,120 L0,120 Z" fill="#1e3a8a" />
-          <path d="M0,55 Q150,0 300,55 L300,120 L0,120 Z" fill="#2563eb" />
+          <path d="M0,40 Q150,-15 300,40 L300,120 L0,120 Z" fill={palette.secondary} />
+          <path d="M0,55 Q150,0 300,55 L300,120 L0,120 Z" fill={palette.primary} />
         </svg>
         <div
           className="relative flex items-end justify-between h-full"

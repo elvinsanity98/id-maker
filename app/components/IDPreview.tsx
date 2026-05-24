@@ -1,19 +1,21 @@
 "use client";
 
-import type { CardData, CardSide, CardSize, TemplateId } from "@/lib/types";
+import type { CardData, CardSide, CardSize, ColorPalette, TemplateId } from "@/lib/types";
 import BlueWaveTemplate from "./templates/BlueWaveTemplate";
 import DarkGoldTemplate from "./templates/DarkGoldTemplate";
 import MinimalTemplate from "./templates/MinimalTemplate";
+import ModernGradientTemplate from "./templates/ModernGradientTemplate";
 
 type Props = {
   data: CardData;
   size: CardSize;
   template: TemplateId;
+  palette: ColorPalette;
   view: CardSide | "both";
   setView: (v: CardSide | "both") => void;
 };
 
-export default function IDPreview({ data, size, template, view, setView }: Props) {
+export default function IDPreview({ data, size, template, palette, view, setView }: Props) {
   const showFront = view === "front" || view === "both";
   const showBack = view === "back" || view === "both";
 
@@ -27,10 +29,10 @@ export default function IDPreview({ data, size, template, view, setView }: Props
 
       <div className="print-area flex justify-center items-center gap-4 sm:gap-6 flex-wrap p-3 sm:p-8 bg-slate-50 rounded-lg min-h-[340px] sm:min-h-[500px] overflow-x-auto">
         {showFront && (
-          <TemplateCard data={data} size={size} template={template} side="front" />
+          <TemplateCard data={data} size={size} template={template} palette={palette} side="front" />
         )}
         {showBack && (
-          <TemplateCard data={data} size={size} template={template} side="back" />
+          <TemplateCard data={data} size={size} template={template} palette={palette} side="back" />
         )}
       </div>
     </section>
@@ -41,16 +43,22 @@ function TemplateCard({
   data,
   size,
   template,
+  palette,
   side,
 }: {
   data: CardData;
   size: CardSize;
   template: TemplateId;
+  palette: ColorPalette;
   side: CardSide;
 }) {
-  if (template === "dark-gold") return <DarkGoldTemplate data={data} size={size} side={side} />;
-  if (template === "minimal") return <MinimalTemplate data={data} size={size} side={side} />;
-  return <BlueWaveTemplate data={data} size={size} side={side} />;
+  if (template === "dark-gold")
+    return <DarkGoldTemplate data={data} size={size} side={side} palette={palette} />;
+  if (template === "minimal")
+    return <MinimalTemplate data={data} size={size} side={side} palette={palette} />;
+  if (template === "modern-gradient")
+    return <ModernGradientTemplate data={data} size={size} side={side} palette={palette} />;
+  return <BlueWaveTemplate data={data} size={size} side={side} palette={palette} />;
 }
 
 function ViewBtn({

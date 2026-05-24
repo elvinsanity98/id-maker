@@ -1,8 +1,8 @@
 "use client";
 
 import { ChangeEvent } from "react";
-import type { CardData, CardSize, TemplateId } from "@/lib/types";
-import { CARD_SIZES, TEMPLATES } from "@/lib/types";
+import type { CardData, CardSize, ColorPalette, TemplateId } from "@/lib/types";
+import { CARD_SIZES, PALETTES, TEMPLATES } from "@/lib/types";
 
 type Props = {
   data: CardData;
@@ -11,6 +11,8 @@ type Props = {
   setSize: (size: CardSize) => void;
   template: TemplateId;
   setTemplate: (t: TemplateId) => void;
+  palette: ColorPalette;
+  setPalette: (p: ColorPalette) => void;
   onPrint: () => void;
   onReset: () => void;
 };
@@ -22,6 +24,8 @@ export default function IDForm({
   setSize,
   template,
   setTemplate,
+  palette,
+  setPalette,
   onPrint,
   onReset,
 }: Props) {
@@ -64,6 +68,36 @@ export default function IDForm({
               </div>
             </button>
           ))}
+        </div>
+
+        <div className="mt-4">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+            Color palette
+          </div>
+          <div className="flex gap-2 flex-wrap items-center">
+            {PALETTES[template].map((p) => {
+              const isActive = palette.id === p.id;
+              const swatchBg = p.gradientFrom
+                ? `linear-gradient(135deg, ${p.gradientFrom} 0%, ${p.gradientTo} 100%)`
+                : `linear-gradient(135deg, ${p.primary} 0%, ${p.secondary} 100%)`;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPalette(p)}
+                  title={p.label}
+                  aria-label={p.label}
+                  className={`w-8 h-8 rounded-full transition border-2 ${
+                    isActive
+                      ? "border-slate-900 ring-2 ring-offset-2 ring-slate-400 scale-110"
+                      : "border-white shadow hover:scale-110"
+                  }`}
+                  style={{ background: swatchBg }}
+                />
+              );
+            })}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-2">{palette.label}</div>
         </div>
       </Section>
 

@@ -1,17 +1,16 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
-import type { CardData, CardSide, CardSize } from "@/lib/types";
+import type { CardData, CardSide, CardSize, ColorPalette } from "@/lib/types";
 
 type Props = {
   data: CardData;
   size: CardSize;
   side: CardSide;
+  palette: ColorPalette;
 };
 
-const ACCENT = "#e11d48"; // rose-600
-
-export default function MinimalTemplate({ data, size, side }: Props) {
+export default function MinimalTemplate({ data, size, side, palette }: Props) {
   const cardStyle = {
     width: size.width,
     height: size.height,
@@ -20,16 +19,22 @@ export default function MinimalTemplate({ data, size, side }: Props) {
     color: "#0f172a",
   } as const;
 
+  const accent = palette.primary;
+
   return (
     <div className="id-card" style={cardStyle}>
       {/* Accent stripe at top */}
-      <div style={{ background: ACCENT, height: "0.4em", flexShrink: 0 }} />
-      {side === "front" ? <Front data={data} /> : <Back data={data} size={size} />}
+      <div style={{ background: accent, height: "0.4em", flexShrink: 0 }} />
+      {side === "front" ? (
+        <Front data={data} accent={accent} />
+      ) : (
+        <Back data={data} size={size} accent={accent} />
+      )}
     </div>
   );
 }
 
-function Front({ data }: { data: CardData }) {
+function Front({ data, accent }: { data: CardData; accent: string }) {
   return (
     <>
       <div className="relative" style={{ padding: "1.2em 1.2em 0.6em" }}>
@@ -48,7 +53,7 @@ function Front({ data }: { data: CardData }) {
         )}
         <div
           className="font-bold uppercase"
-          style={{ fontSize: "0.7em", letterSpacing: "2px", color: ACCENT }}
+          style={{ fontSize: "0.7em", letterSpacing: "2px", color: accent }}
         >
           STUDENT ID
         </div>
@@ -93,19 +98,27 @@ function Front({ data }: { data: CardData }) {
       </div>
 
       {/* Bottom accent stripe */}
-      <div style={{ background: ACCENT, height: "0.3em", flexShrink: 0 }} />
+      <div style={{ background: accent, height: "0.3em", flexShrink: 0 }} />
     </>
   );
 }
 
-function Back({ data, size }: { data: CardData; size: CardSize }) {
+function Back({
+  data,
+  size,
+  accent,
+}: {
+  data: CardData;
+  size: CardSize;
+  accent: string;
+}) {
   const terms = data.terms.split("|").map((s) => s.trim()).filter(Boolean);
   return (
     <>
       <div style={{ padding: "1.2em 1.2em 0.6em" }}>
         <div
           className="font-bold uppercase"
-          style={{ fontSize: "0.7em", letterSpacing: "2px", color: ACCENT }}
+          style={{ fontSize: "0.7em", letterSpacing: "2px", color: accent }}
         >
           TERMS &amp; CONDITIONS
         </div>
@@ -122,7 +135,9 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
                 color: "#475569",
               }}
             >
-              <span className="absolute left-0" style={{ color: ACCENT, fontWeight: 700 }}>—</span>
+              <span className="absolute left-0" style={{ color: accent, fontWeight: 700 }}>
+                —
+              </span>
               {t}
             </li>
           ))}
@@ -178,7 +193,7 @@ function Back({ data, size }: { data: CardData; size: CardSize }) {
         </div>
       </div>
 
-      <div style={{ background: ACCENT, height: "0.3em", flexShrink: 0 }} />
+      <div style={{ background: accent, height: "0.3em", flexShrink: 0 }} />
     </>
   );
 }
