@@ -70,7 +70,7 @@ export default function IDForm({
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onFile = (key: "photo" | "logo") => (e: ChangeEvent<HTMLInputElement>) => {
+  const onFile = (key: "photo" | "logo" | "signature") => (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -80,7 +80,7 @@ export default function IDForm({
     reader.readAsDataURL(file);
   };
 
-  const removeFile = (key: "photo" | "logo") => () =>
+  const removeFile = (key: "photo" | "logo" | "signature") => () =>
     setData((prev) => ({ ...prev, [key]: null }));
 
   const tryPickTemplate = (t: TemplateId) => {
@@ -322,6 +322,48 @@ export default function IDForm({
 
       <Section title="Other Details (Back)">
         <Field label="Principal Name" value={data.principal} onChange={update("principal")} />
+
+        <div className="mb-3">
+          <div className="text-xs text-slate-600 font-medium mb-1">Principal Signature</div>
+          <p className="text-[11px] text-slate-500 mb-1.5">
+            Upload a signature image (PNG with transparent background works best).
+            Leave empty to show a script &quot;Signature&quot; placeholder.
+          </p>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            onChange={onFile("signature")}
+            className="w-full text-sm cursor-pointer file:mr-3 file:px-3 file:py-1.5 file:rounded file:border-0 file:bg-blue-600 file:text-white file:cursor-pointer hover:file:bg-blue-700"
+          />
+          {data.signature && (
+            <div className="flex items-center gap-3 mt-2">
+              <div
+                className="h-12 w-24 flex items-center justify-center rounded border border-slate-200"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)",
+                  backgroundSize: "10px 10px",
+                  backgroundPosition: "0 0, 0 5px, 5px -5px, -5px 0",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={data.signature}
+                  alt="signature preview"
+                  style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={removeFile("signature")}
+                className="text-xs text-blue-600 underline"
+              >
+                Remove signature
+              </button>
+            </div>
+          )}
+        </div>
+
         <Field label="Joined Date" value={data.joinedDate} onChange={update("joinedDate")} />
         <Field label="Expire Date" value={data.expireDate} onChange={update("expireDate")} />
         <Field label="Logo Text" value={data.logoText} onChange={update("logoText")} />

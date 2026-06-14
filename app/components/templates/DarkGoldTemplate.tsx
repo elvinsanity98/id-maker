@@ -177,9 +177,18 @@ function Back({
       </div>
 
       <div className="text-center" style={{ padding: "0.3em 0 0.5em" }}>
-        <div className="signature-font italic" style={{ color: accent, fontSize: "1.6em", lineHeight: 1 }}>
-          Signature
-        </div>
+        {data.signature ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={data.signature}
+            alt="signature"
+            style={{ height: "2.6em", maxWidth: "70%", objectFit: "contain", display: "inline-block" }}
+          />
+        ) : (
+          <div className="signature-font italic" style={{ color: accent, fontSize: "1.6em", lineHeight: 1 }}>
+            Signature
+          </div>
+        )}
         <div className="font-bold" style={{ marginTop: "0.2em", fontSize: "0.9em", color: "#f1f5f9" }}>
           {data.principal}
         </div>

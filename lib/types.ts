@@ -18,6 +18,7 @@ export type CardData = {
   terms: string;
   photo: string | null;
   logo: string | null;
+  signature: string | null;
 };
 
 export type CardSize = {
@@ -172,4 +173,5 @@ export const DEFAULT_DATA: CardData = {
     "Lorem ipsum dolors sit amets, the a into a for consectetuer adipiscing elit, sed the a diam nonumys nibh Lorem ipsums.|Lorem ipsum dolors sit amets, the a into a for consectetuer adipiscing elit.",
   photo: null,
   logo: null,
+  signature: null,
 };
