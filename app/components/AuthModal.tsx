@@ -40,17 +40,26 @@ export default function AuthModal({
     setError(null);
     setInfo(null);
     setBusy(true);
-    const fn = mode === "signin" ? signIn(email, password) : signUp(email, password, fullName);
-    const { error: err } = await fn;
-    setBusy(false);
-    if (err) {
-      setError(err);
-      return;
-    }
-    if (mode === "signup") {
-      setInfo("Account created! Check your email to confirm, then sign in.");
-    } else {
-      onClose();
+    try {
+      const { error: err } =
+        mode === "signin"
+          ? await signIn(email, password)
+          : await signUp(email, password, fullName);
+      if (err) {
+        setError(err);
+        return;
+      }
+      if (mode === "signup") {
+        setInfo("Account created! Check your email to confirm, then sign in.");
+      } else {
+        onClose();
+      }
+    } catch (err) {
+      // signIn/signUp already swallow errors, but guard here too so the
+      // button can never get stuck on "Working…" no matter what throws.
+      setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
+    } finally {
+      setBusy(false);
     }
   };
 

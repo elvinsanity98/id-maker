@@ -6,6 +6,32 @@ import { validateLicense } from "@/lib/license";
 
 export type Tier = "free" | "premium";
 
+/**
+ * Race a promise against a timeout. Supabase requests to a paused / offline
+ * project can hang the socket indefinitely; this guarantees we reject with a
+ * clear error after `ms` instead of leaving the UI stuck on "Working…".
+ */
+function withTimeout<T>(promise: PromiseLike<T>, ms = 15000): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms)
+    ),
+  ]);
+}
+
+/** Turn a thrown/rejected auth error into a user-facing message. */
+function describeNetworkError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg === "timeout") {
+    return "The server didn't respond. Your Supabase project may be paused (free projects pause after ~1 week idle) — open the Supabase dashboard to resume it, then try again.";
+  }
+  if (/fetch|network|Failed to fetch/i.test(msg)) {
+    return "Couldn't reach the auth server. Check your connection, or your Supabase project may be paused — resume it from the dashboard and retry.";
+  }
+  return msg || "Something went wrong while signing in. Please try again.";
+}
+
 type AuthContextValue = {
   user: Profile | null;
   /** True once we've completed the initial session check, regardless of result. */
@@ -111,25 +137,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // which defaults to localhost:3000 — fine for testing, wrong in prod.
     const emailRedirectTo =
       typeof window !== "undefined" ? window.location.origin : undefined;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo,
-      },
-    });
-    if (error) return { error: error.message };
-    await refresh();
-    return {};
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName }, emailRedirectTo },
+        })
+      );
+      if (error) return { error: error.message };
+      await refresh();
+      return {};
+    } catch (err) {
+      return { error: describeNetworkError(err) };
+    }
   }, [refresh]);
 
   const signIn: AuthContextValue["signIn"] = useCallback(async (email, password) => {
     if (!supabase) return { error: "Auth is not configured. Add Supabase env vars." };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    await refresh();
-    return {};
+    try {
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password })
+      );
+      if (error) return { error: error.message };
+      await refresh();
+      return {};
+    } catch (err) {
+      return { error: describeNetworkError(err) };
+    }
   }, [refresh]);
 
   const signOut = useCallback(async () => {
