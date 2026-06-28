@@ -25,6 +25,7 @@ export default function AttendancePage() {
   const [mode, setMode] = useState<Mode>("camera");
   const [status, setStatus] = useState<Status>("present");
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [countdown, setCountdown] = useState(0);
   const [recent, setRecent] = useState<AttendanceRow[]>([]);
   const [scanning, setScanning] = useState(false);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
@@ -42,6 +43,23 @@ export default function AttendancePage() {
   useEffect(() => {
     if (user && tier === "premium") refreshRecent();
   }, [user, tier, refreshRecent]);
+
+  // Popup countdown: when a result arrives, tick 3 -> 0 then auto-dismiss.
+  useEffect(() => {
+    if (!feedback) return;
+    setCountdown(3);
+    const tick = setInterval(() => {
+      setCountdown((n) => {
+        if (n <= 1) {
+          clearInterval(tick);
+          setFeedback(null);
+          return 0;
+        }
+        return n - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [feedback]);
 
   // ─── core: resolve a scanned code against the roster + log it ──
   const handleCode = useCallback(
@@ -243,20 +261,6 @@ export default function AttendancePage() {
             </div>
           )}
 
-          {/* Result banner */}
-          {feedback && (
-            <div
-              className={`mt-4 p-4 rounded-lg border text-center ${
-                feedback.ok
-                  ? "bg-emerald-50 border-emerald-300 text-emerald-900"
-                  : "bg-red-50 border-red-300 text-red-900"
-              }`}
-            >
-              <div className="text-2xl mb-1">{feedback.ok ? "✓" : "✕"}</div>
-              <div className="font-bold">{feedback.title}</div>
-              <div className="text-sm opacity-80">{feedback.detail}</div>
-            </div>
-          )}
         </section>
 
         {/* Recent scans */}
@@ -286,7 +290,74 @@ export default function AttendancePage() {
           )}
         </aside>
       </div>
+
+      {feedback && (
+        <ResultPopup feedback={feedback} countdown={countdown} onClose={() => setFeedback(null)} />
+      )}
     </Shell>
+  );
+}
+
+function ResultPopup({
+  feedback,
+  countdown,
+  onClose,
+}: {
+  feedback: NonNullable<Feedback>;
+  countdown: number;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={`relative w-full max-w-sm rounded-2xl shadow-2xl p-8 text-center border-4 ${
+          feedback.ok
+            ? "bg-emerald-50 border-emerald-500"
+            : "bg-red-50 border-red-500"
+        }`}
+        style={{ animation: "popIn 0.18s ease-out" }}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-4 text-slate-400 hover:text-slate-700 text-2xl leading-none"
+          aria-label="Close"
+        >
+          &times;
+        </button>
+
+        <div
+          className={`mx-auto mb-3 w-20 h-20 rounded-full flex items-center justify-center text-5xl text-white ${
+            feedback.ok ? "bg-emerald-500" : "bg-red-500"
+          }`}
+        >
+          {feedback.ok ? "✓" : "✕"}
+        </div>
+
+        <div
+          className={`text-xl font-extrabold mb-1 ${
+            feedback.ok ? "text-emerald-900" : "text-red-900"
+          }`}
+        >
+          {feedback.title}
+        </div>
+        <div className="text-sm text-slate-600 mb-4">{feedback.detail}</div>
+
+        <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+          <span
+            className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-bold text-white ${
+              feedback.ok ? "bg-emerald-500" : "bg-red-500"
+            }`}
+          >
+            {countdown}
+          </span>
+          <span>closing in {countdown}s</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
