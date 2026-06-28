@@ -2,12 +2,17 @@
 
 import { supabase } from "./supabase";
 
+export type AttStatus = "on-time" | "late" | "present" | "absent";
+export type AttEvent = "in" | "out";
+
 export type AttendanceRow = {
   id: string;
   owner_id: string;
   student_lrn: string;
   student_name: string | null;
-  status: "present" | "late" | "absent";
+  status: AttStatus;
+  event: AttEvent;
+  org: string | null;
   source: string | null;
   scanned_at: string;
 };
@@ -16,7 +21,9 @@ export async function logAttendance(
   ownerId: string,
   studentLrn: string,
   studentName: string | null,
-  status: "present" | "late" | "absent",
+  status: AttStatus,
+  event: AttEvent,
+  org: string | null,
   source: "camera" | "scanner"
 ): Promise<{ row?: AttendanceRow; error?: string }> {
   if (!supabase) return { error: "Supabase not configured." };
@@ -27,6 +34,8 @@ export async function logAttendance(
       student_lrn: studentLrn,
       student_name: studentName,
       status,
+      event,
+      org,
       source,
     })
     .select("*")
@@ -51,7 +60,9 @@ export async function listAttendance(
 export type AttendanceFilter = {
   from?: string; // yyyy-mm-dd inclusive
   to?: string; // yyyy-mm-dd inclusive
-  status?: "" | "present" | "late" | "absent";
+  status?: "" | AttStatus;
+  event?: "" | AttEvent;
+  org?: string; // "" = all orgs
   search?: string; // matches name or LRN
 };
 
@@ -66,6 +77,8 @@ export async function queryAttendance(
   if (f.from) q = q.gte("scanned_at", `${f.from}T00:00:00`);
   if (f.to) q = q.lte("scanned_at", `${f.to}T23:59:59.999`);
   if (f.status) q = q.eq("status", f.status);
+  if (f.event) q = q.eq("event", f.event);
+  if (f.org) q = q.eq("org", f.org);
 
   const s = (f.search ?? "").trim().replace(/[%,]/g, " ");
   if (s) q = q.or(`student_name.ilike.%${s}%,student_lrn.ilike.%${s}%`);
@@ -77,13 +90,15 @@ export async function queryAttendance(
 
 /** Build a CSV string from attendance rows. */
 export function attendanceToCsv(rows: AttendanceRow[]): string {
-  const head = ["Name", "LRN", "Status", "Source", "Date", "Time"];
+  const head = ["Organization", "Name", "LRN", "Event", "Status", "Source", "Date", "Time"];
   const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
   const lines = rows.map((r) => {
     const d = new Date(r.scanned_at);
     return [
+      r.org ?? "",
       r.student_name ?? "",
       r.student_lrn,
+      r.event === "out" ? "Time Out" : "Time In",
       r.status,
       r.source ?? "",
       d.toLocaleDateString(),

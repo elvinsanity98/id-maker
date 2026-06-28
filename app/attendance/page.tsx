@@ -11,9 +11,16 @@ import {
   normalizeScan,
   type AttendanceRow,
 } from "@/lib/attendance";
+import {
+  computeStatus,
+  getOrgSettings,
+  listOrgs,
+  saveOrgSettings,
+  type OrgSettings,
+} from "@/lib/orgSettings";
 
 type Mode = "camera" | "scanner";
-type Status = "present" | "late";
+type AttEvent = "in" | "out";
 
 type Feedback = {
   ok: boolean;
@@ -25,7 +32,16 @@ export default function AttendancePage() {
   const { user, tier, loaded } = useAuth();
   const [tab, setTab] = useState<"scan" | "report">("scan");
   const [mode, setMode] = useState<Mode>("camera");
-  const [status, setStatus] = useState<Status>("present");
+  const [event, setEvent] = useState<AttEvent>("in");
+  const [orgs, setOrgs] = useState<string[]>([]);
+  const [org, setOrg] = useState<string>("");
+  const [settings, setSettings] = useState<OrgSettings>({
+    org: "",
+    late_after_in: "08:00",
+    late_after_out: "17:00",
+  });
+  const [savingCfg, setSavingCfg] = useState(false);
+  const [cfgSaved, setCfgSaved] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [countdown, setCountdown] = useState(0);
   const [recent, setRecent] = useState<AttendanceRow[]>([]);
@@ -45,6 +61,31 @@ export default function AttendancePage() {
   useEffect(() => {
     if (user && tier === "premium") refreshRecent();
   }, [user, tier, refreshRecent]);
+
+  // Load the org list (distinct school names from the roster).
+  useEffect(() => {
+    if (!user || tier !== "premium") return;
+    listOrgs().then((list) => {
+      setOrgs(list);
+      setOrg((cur) => cur || list[0] || "");
+    });
+  }, [user, tier]);
+
+  // Load per-org cutoff settings whenever the active org changes.
+  useEffect(() => {
+    if (!org) return;
+    getOrgSettings(org).then(setSettings);
+    setCfgSaved(false);
+  }, [org]);
+
+  const saveCfg = useCallback(async () => {
+    if (!user || !org) return;
+    setSavingCfg(true);
+    await saveOrgSettings(user.id, settings);
+    setSavingCfg(false);
+    setCfgSaved(true);
+    setTimeout(() => setCfgSaved(false), 1800);
+  }, [user, org, settings]);
 
   // Popup countdown: when a result arrives, tick 3 -> 0 then auto-dismiss.
   useEffect(() => {
@@ -73,7 +114,7 @@ export default function AttendancePage() {
       if (lastScanRef.current.code === lrn && now - lastScanRef.current.at < 3000) return;
       lastScanRef.current = { code: lrn, at: now };
 
-      const { student, error } = await findStudentByLrn(lrn);
+      const { student, error } = await findStudentByLrn(lrn, org || undefined);
       if (error) {
         setFeedback({ ok: false, title: "Lookup failed", detail: error });
         return;
@@ -82,29 +123,34 @@ export default function AttendancePage() {
         setFeedback({
           ok: false,
           title: "Not found",
-          detail: `No student with LRN ${lrn} in your roster. Save them as a draft first.`,
+          detail: `No student with LRN ${lrn}${org ? ` in ${org}` : ""}. Save them as a draft first.`,
         });
         return;
       }
+      // Auto-decide on-time vs late from the org's cutoff for this event.
+      const computed = computeStatus(settings, event);
       const { error: logErr } = await logAttendance(
         user.id,
         student.lrn,
         student.name,
-        status,
+        computed,
+        event,
+        org || student.school || null,
         source
       );
       if (logErr) {
         setFeedback({ ok: false, title: "Could not log", detail: logErr });
         return;
       }
+      const evLabel = event === "in" ? "TIME IN" : "TIME OUT";
       setFeedback({
-        ok: true,
-        title: `${student.name ?? student.lrn} — ${status.toUpperCase()}`,
-        detail: `LRN ${student.lrn} · ${new Date().toLocaleTimeString()}`,
+        ok: computed === "on-time",
+        title: `${student.name ?? student.lrn}`,
+        detail: `${evLabel} · ${computed.toUpperCase()} · ${new Date().toLocaleTimeString()}`,
       });
       refreshRecent();
     },
-    [user, status, refreshRecent]
+    [user, org, event, settings, refreshRecent]
   );
 
   // ─── camera scanner (html5-qrcode, lazy-loaded) ────────────────
@@ -203,20 +249,75 @@ export default function AttendancePage() {
       ) : (
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="bg-white rounded-xl shadow-sm p-5">
-          {/* Device + status controls */}
+          {/* Organization selector + cutoff settings */}
+          <div className="mb-4 p-3 rounded-lg border border-slate-200 bg-slate-50">
+            <label className="block text-xs font-semibold text-slate-600 mb-1">
+              Organization / School
+            </label>
+            {orgs.length === 0 ? (
+              <p className="text-xs text-amber-700">
+                No schools yet. Save a card draft (with a School Name + LRN) to
+                build your roster.
+              </p>
+            ) : (
+              <select
+                value={org}
+                onChange={(e) => setOrg(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900"
+              >
+                {orgs.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            )}
+
+            {org && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="text-[11px] font-medium text-slate-600">
+                  On-time until (Time In)
+                  <input
+                    type="time"
+                    value={settings.late_after_in}
+                    onChange={(e) => setSettings((s) => ({ ...s, late_after_in: e.target.value }))}
+                    className="w-full mt-1 px-2 py-1.5 border border-slate-300 rounded-md text-sm bg-white text-slate-900"
+                  />
+                </label>
+                <label className="text-[11px] font-medium text-slate-600">
+                  On-time until (Time Out)
+                  <input
+                    type="time"
+                    value={settings.late_after_out}
+                    onChange={(e) => setSettings((s) => ({ ...s, late_after_out: e.target.value }))}
+                    className="w-full mt-1 px-2 py-1.5 border border-slate-300 rounded-md text-sm bg-white text-slate-900"
+                  />
+                </label>
+                <div className="col-span-2 flex items-center gap-2">
+                  <button
+                    onClick={saveCfg}
+                    disabled={savingCfg}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingCfg ? "Saving…" : "Save cutoff times"}
+                  </button>
+                  {cfgSaved && <span className="text-[11px] text-emerald-700 font-semibold">✓ Saved</span>}
+                  <span className="text-[10px] text-slate-400">
+                    Scan ≤ cutoff = on-time, else late.
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Device + Time In/Out controls */}
           <div className="flex flex-wrap gap-3 items-center mb-4">
             <div className="inline-flex rounded-md border border-slate-300 overflow-hidden">
               <ModeBtn active={mode === "camera"} onClick={() => setMode("camera")}>📷 Camera</ModeBtn>
               <ModeBtn active={mode === "scanner"} onClick={() => setMode("scanner")}>🔌 Hardware scanner</ModeBtn>
             </div>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as Status)}
-              className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900"
-            >
-              <option value="present">Mark Present</option>
-              <option value="late">Mark Late</option>
-            </select>
+            <div className="inline-flex rounded-md border border-slate-300 overflow-hidden">
+              <ModeBtn active={event === "in"} onClick={() => setEvent("in")}>⬇ Time In</ModeBtn>
+              <ModeBtn active={event === "out"} onClick={() => setEvent("out")}>⬆ Time Out</ModeBtn>
+            </div>
           </div>
 
           {mode === "camera" ? (
@@ -288,10 +389,14 @@ export default function AttendancePage() {
                 <li key={r.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-200">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-800 truncate">{r.student_name ?? r.student_lrn}</div>
-                    <div className="text-[10px] text-slate-400">{new Date(r.scanned_at).toLocaleString()}</div>
+                    <div className="text-[10px] text-slate-400">
+                      {r.event === "out" ? "Out" : "In"} · {new Date(r.scanned_at).toLocaleString()}
+                    </div>
                   </div>
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                    r.status === "present" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                    r.status === "on-time" || r.status === "present"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-red-100 text-red-800"
                   }`}>
                     {r.status}
                   </span>

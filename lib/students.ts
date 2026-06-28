@@ -43,16 +43,18 @@ export async function upsertStudentFromCard(
   return {};
 }
 
-/** Look up a student by LRN within the signed-in user's roster. */
+/**
+ * Look up a student by LRN within the signed-in user's roster. When `org` is
+ * given, scope to that school so the same LRN under two schools can't collide.
+ */
 export async function findStudentByLrn(
-  lrn: string
+  lrn: string,
+  org?: string
 ): Promise<{ student?: StudentRow; error?: string }> {
   if (!supabase) return { error: "Supabase not configured." };
-  const { data, error } = await supabase
-    .from("students")
-    .select("*")
-    .eq("lrn", lrn.trim())
-    .maybeSingle();
+  let q = supabase.from("students").select("*").eq("lrn", lrn.trim());
+  if (org) q = q.eq("school", org);
+  const { data, error } = await q.maybeSingle();
   if (error) return { error: error.message };
   if (!data) return {};
   return { student: data as StudentRow };
