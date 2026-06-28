@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import { deleteDraft, listDrafts, renameDraft, saveDraft, updateDraft } from "@/lib/drafts";
+import { upsertStudentFromCard } from "@/lib/students";
 import { TIER_LIMITS, type DraftPayload, type DraftRow } from "@/lib/types";
 
 /** The draft currently being edited (loaded into the form). */
@@ -103,6 +104,8 @@ export default function DraftsPanel({
       setError(err);
       return;
     }
+    // Mirror into the attendance roster (keyed by LRN). Non-fatal if it fails.
+    await upsertStudentFromCard(user.id, currentPayload.data);
     setShowSave(false);
     setDraftName("");
     flashSaved("Saved as new draft");
@@ -146,6 +149,7 @@ export default function DraftsPanel({
       setError(err);
       return;
     }
+    await upsertStudentFromCard(user.id, currentPayload.data);
     flashSaved(`Saved "${activeDraft.name}"`);
     refresh();
   };

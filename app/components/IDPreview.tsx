@@ -6,6 +6,7 @@ import BlueWaveTemplate from "./templates/BlueWaveTemplate";
 import DarkGoldTemplate from "./templates/DarkGoldTemplate";
 import MinimalTemplate from "./templates/MinimalTemplate";
 import ModernGradientTemplate from "./templates/ModernGradientTemplate";
+import DepEdGreenTemplate from "./templates/DepEdGreenTemplate";
 import { useAuth } from "./AuthProvider";
 import ExportButton from "./ExportButton";
 
@@ -145,6 +146,8 @@ function TemplateCard({ config, side }: { config: CardConfig; side: CardSide }) 
     return <MinimalTemplate data={data} size={size} side={side} palette={palette} />;
   if (template === "modern-gradient")
     return <ModernGradientTemplate data={data} size={size} side={side} palette={palette} />;
+  if (template === "deped-green")
+    return <DepEdGreenTemplate data={data} size={size} side={side} palette={palette} />;
   return <BlueWaveTemplate data={data} size={size} side={side} palette={palette} />;
 }
 

@@ -1,0 +1,340 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "../components/AuthProvider";
+import { findStudentByLrn } from "@/lib/students";
+import {
+  listAttendance,
+  logAttendance,
+  normalizeScan,
+  type AttendanceRow,
+} from "@/lib/attendance";
+
+type Mode = "camera" | "scanner";
+type Status = "present" | "late";
+
+type Feedback = {
+  ok: boolean;
+  title: string;
+  detail: string;
+} | null;
+
+export default function AttendancePage() {
+  const { user, tier, loaded } = useAuth();
+  const [mode, setMode] = useState<Mode>("camera");
+  const [status, setStatus] = useState<Status>("present");
+  const [feedback, setFeedback] = useState<Feedback>(null);
+  const [recent, setRecent] = useState<AttendanceRow[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
+  const [cameraId, setCameraId] = useState<string>("");
+  const scannerRef = useRef<unknown>(null);
+  const wedgeRef = useRef<HTMLInputElement>(null);
+  // Guard against the same code firing many times while the QR sits in frame.
+  const lastScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+
+  const refreshRecent = useCallback(async () => {
+    const { data } = await listAttendance(30);
+    setRecent(data);
+  }, []);
+
+  useEffect(() => {
+    if (user && tier === "premium") refreshRecent();
+  }, [user, tier, refreshRecent]);
+
+  // ─── core: resolve a scanned code against the roster + log it ──
+  const handleCode = useCallback(
+    async (raw: string, source: "camera" | "scanner") => {
+      if (!user) return;
+      const lrn = normalizeScan(raw);
+      const now = Date.now();
+      // Debounce identical reads within 3s (camera streams repeats).
+      if (lastScanRef.current.code === lrn && now - lastScanRef.current.at < 3000) return;
+      lastScanRef.current = { code: lrn, at: now };
+
+      const { student, error } = await findStudentByLrn(lrn);
+      if (error) {
+        setFeedback({ ok: false, title: "Lookup failed", detail: error });
+        return;
+      }
+      if (!student) {
+        setFeedback({
+          ok: false,
+          title: "Not found",
+          detail: `No student with LRN ${lrn} in your roster. Save them as a draft first.`,
+        });
+        return;
+      }
+      const { error: logErr } = await logAttendance(
+        user.id,
+        student.lrn,
+        student.name,
+        status,
+        source
+      );
+      if (logErr) {
+        setFeedback({ ok: false, title: "Could not log", detail: logErr });
+        return;
+      }
+      setFeedback({
+        ok: true,
+        title: `${student.name ?? student.lrn} — ${status.toUpperCase()}`,
+        detail: `LRN ${student.lrn} · ${new Date().toLocaleTimeString()}`,
+      });
+      refreshRecent();
+    },
+    [user, status, refreshRecent]
+  );
+
+  // ─── camera scanner (html5-qrcode, lazy-loaded) ────────────────
+  const startCamera = useCallback(async () => {
+    setFeedback(null);
+    const { Html5Qrcode } = await import("html5-qrcode");
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      setCameras(devices.map((d) => ({ id: d.id, label: d.label || d.id })));
+      const useId = cameraId || devices[devices.length - 1]?.id;
+      if (!useId) {
+        setFeedback({ ok: false, title: "No camera", detail: "No camera device found." });
+        return;
+      }
+      setCameraId(useId);
+      const inst = new Html5Qrcode("qr-reader");
+      scannerRef.current = inst;
+      await inst.start(
+        useId,
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (decoded: string) => handleCode(decoded, "camera"),
+        () => {}
+      );
+      setScanning(true);
+    } catch (err) {
+      setFeedback({
+        ok: false,
+        title: "Camera error",
+        detail: err instanceof Error ? err.message : "Could not start camera. Grant permission and use HTTPS.",
+      });
+    }
+  }, [cameraId, handleCode]);
+
+  const stopCamera = useCallback(async () => {
+    const inst = scannerRef.current as { stop: () => Promise<void>; clear: () => void } | null;
+    if (inst) {
+      try {
+        await inst.stop();
+        inst.clear();
+      } catch {
+        /* already stopped */
+      }
+      scannerRef.current = null;
+    }
+    setScanning(false);
+  }, []);
+
+  // Stop camera on unmount or when leaving camera mode.
+  useEffect(() => {
+    if (mode !== "camera") stopCamera();
+    return () => {
+      stopCamera();
+    };
+  }, [mode, stopCamera]);
+
+  // Keep the hidden wedge input focused in scanner mode.
+  useEffect(() => {
+    if (mode === "scanner") wedgeRef.current?.focus();
+  }, [mode]);
+
+  // ─── gating ────────────────────────────────────────────────────
+  if (!loaded) {
+    return <Shell><p className="text-slate-500">Loading…</p></Shell>;
+  }
+  if (!user) {
+    return (
+      <Shell>
+        <Gate
+          title="Sign in required"
+          body="Attendance scanning runs on your account roster. Sign in from the home page first."
+        />
+      </Shell>
+    );
+  }
+  if (tier !== "premium") {
+    return (
+      <Shell>
+        <Gate
+          title="★ Premium feature"
+          body="QR attendance scanning is part of Premium. Upgrade from the home page to unlock it."
+        />
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className="bg-white rounded-xl shadow-sm p-5">
+          {/* Device + status controls */}
+          <div className="flex flex-wrap gap-3 items-center mb-4">
+            <div className="inline-flex rounded-md border border-slate-300 overflow-hidden">
+              <ModeBtn active={mode === "camera"} onClick={() => setMode("camera")}>📷 Camera</ModeBtn>
+              <ModeBtn active={mode === "scanner"} onClick={() => setMode("scanner")}>🔌 Hardware scanner</ModeBtn>
+            </div>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as Status)}
+              className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900"
+            >
+              <option value="present">Mark Present</option>
+              <option value="late">Mark Late</option>
+            </select>
+          </div>
+
+          {mode === "camera" ? (
+            <div>
+              {cameras.length > 1 && (
+                <select
+                  value={cameraId}
+                  onChange={(e) => setCameraId(e.target.value)}
+                  className="w-full mb-3 px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900"
+                >
+                  {cameras.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              )}
+              <div
+                id="qr-reader"
+                className="w-full max-w-sm mx-auto rounded-lg overflow-hidden bg-slate-900"
+                style={{ minHeight: 240 }}
+              />
+              <div className="flex gap-2 justify-center mt-3">
+                {!scanning ? (
+                  <button onClick={startCamera} className="px-4 py-2 bg-emerald-600 text-white rounded-md font-semibold hover:bg-emerald-700">
+                    Start camera
+                  </button>
+                ) : (
+                  <button onClick={stopCamera} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-md font-semibold hover:bg-slate-300">
+                    Stop
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-slate-600 mb-2">
+                Click the box, then scan with your USB/Bluetooth scanner. Most
+                act as a keyboard and send the code followed by Enter.
+              </p>
+              <input
+                ref={wedgeRef}
+                type="text"
+                autoFocus
+                placeholder="Waiting for scan…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = (e.target as HTMLInputElement).value;
+                    if (val.trim()) handleCode(val, "scanner");
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }}
+                className="w-full px-4 py-3 border-2 border-dashed border-emerald-400 rounded-lg text-center text-lg bg-emerald-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          )}
+
+          {/* Result banner */}
+          {feedback && (
+            <div
+              className={`mt-4 p-4 rounded-lg border text-center ${
+                feedback.ok
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                  : "bg-red-50 border-red-300 text-red-900"
+              }`}
+            >
+              <div className="text-2xl mb-1">{feedback.ok ? "✓" : "✕"}</div>
+              <div className="font-bold">{feedback.title}</div>
+              <div className="text-sm opacity-80">{feedback.detail}</div>
+            </div>
+          )}
+        </section>
+
+        {/* Recent scans */}
+        <aside className="bg-white rounded-xl shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-slate-800">Recent</h2>
+            <button onClick={refreshRecent} className="text-xs text-blue-600 underline">Refresh</button>
+          </div>
+          {recent.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">No scans yet.</p>
+          ) : (
+            <ul className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+              {recent.map((r) => (
+                <li key={r.id} className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-200">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-slate-800 truncate">{r.student_name ?? r.student_lrn}</div>
+                    <div className="text-[10px] text-slate-400">{new Date(r.scanned_at).toLocaleString()}</div>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                    r.status === "present" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                  }`}>
+                    {r.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <header className="bg-gradient-to-br from-blue-600 to-blue-900 text-white py-3 px-4 sm:px-8 shadow">
+        <div className="max-w-[1500px] mx-auto flex items-center justify-between">
+          <h1 className="text-lg sm:text-2xl font-bold">Attendance Scanner</h1>
+          <Link href="/" className="text-sm font-semibold border border-white/40 rounded-md px-3 py-1.5 hover:bg-white/10">
+            ← Back to ID Maker
+          </Link>
+        </div>
+      </header>
+      <main className="max-w-[1500px] mx-auto p-4 sm:p-6">{children}</main>
+    </>
+  );
+}
+
+function Gate({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="max-w-md mx-auto mt-12 bg-white rounded-xl shadow-sm p-6 text-center">
+      <h2 className="text-xl font-bold text-slate-900 mb-2">{title}</h2>
+      <p className="text-slate-600 mb-4">{body}</p>
+      <Link href="/" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700">
+        Go to home
+      </Link>
+    </div>
+  );
+}
+
+function ModeBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-2 text-sm font-semibold ${
+        active ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}

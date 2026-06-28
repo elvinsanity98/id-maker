@@ -370,7 +370,8 @@ export default function IDForm({
         <Field label="Tagline" value={data.tagline} onChange={update("tagline")} />
         <Field label="QR Code Data (URL or text)" value={data.qrData} onChange={update("qrData")} />
         <label className="block mb-2 text-xs text-slate-600 font-medium">
-          Terms &amp; Conditions
+          Terms &amp; Conditions{" "}
+          <span className="text-[10px] text-slate-400 font-normal">(other templates)</span>
           <div className="text-[10px] text-slate-400 font-normal">Separate multiple bullets with |</div>
           <textarea
             value={data.terms}
@@ -379,6 +380,16 @@ export default function IDForm({
             className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </label>
+      </Section>
+
+      <Section title="DepEd Template Fields">
+        <p className="text-[11px] text-slate-500 mb-2 -mt-1">
+          Used by the DepEd School ID template. The QR encodes the LRN for
+          attendance scanning.
+        </p>
+        <Field label="Grade & Section" value={data.gradeSection} onChange={update("gradeSection")} />
+        <Field label="Emergency Contact Address" value={data.address} onChange={update("address")} />
+        <Field label="Validity (S.Y.)" value={data.validity} onChange={update("validity")} />
       </Section>
 
       <div className="flex gap-2 pt-2">

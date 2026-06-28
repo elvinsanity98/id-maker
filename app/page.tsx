@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import IDForm from "./components/IDForm";
 import IDPreview from "./components/IDPreview";
 import UserMenu from "./components/UserMenu";
@@ -109,7 +110,15 @@ export default function Home() {
               Fill in details — see your ID update live. Pick a template, size, and print.
             </p>
           </div>
-          <UserMenu onUpgradeClick={() => setUpgradeOpen(true)} />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/attendance"
+              className="text-xs sm:text-sm font-semibold text-white border border-white/40 rounded-md px-2.5 sm:px-3 py-1.5 hover:bg-white/10 whitespace-nowrap"
+            >
+              📷 Attendance
+            </Link>
+            <UserMenu onUpgradeClick={() => setUpgradeOpen(true)} />
+          </div>
         </div>
       </header>
 

@@ -19,6 +19,10 @@ export type CardData = {
   photo: string | null;
   logo: string | null;
   signature: string | null;
+  // DepEd template extras (optional; ignored by other templates).
+  gradeSection: string;
+  address: string;
+  validity: string;
 };
 
 export type CardSize = {
@@ -38,7 +42,12 @@ export const CARD_SIZES: CardSize[] = [
   { id: "a6", label: 'A6 — 4.13" × 5.83"', width: "4.13in", height: "5.83in", baseFontPx: 15 },
 ];
 
-export type TemplateId = "blue-wave" | "dark-gold" | "minimal" | "modern-gradient";
+export type TemplateId =
+  | "blue-wave"
+  | "dark-gold"
+  | "minimal"
+  | "modern-gradient"
+  | "deped-green";
 
 export type TemplateOption = {
   id: TemplateId;
@@ -51,6 +60,7 @@ export const TEMPLATES: TemplateOption[] = [
   { id: "dark-gold", label: "Dark Elegance", description: "Corporate dark with metallic accents" },
   { id: "minimal", label: "Minimal", description: "Clean, modern, lots of whitespace" },
   { id: "modern-gradient", label: "Modern Gradient", description: "Vivid diagonal gradient with square photo" },
+  { id: "deped-green", label: "DepEd School ID", description: "Philippine public-school layout with logos and QR" },
 ];
 
 export type ColorPalette = {
@@ -89,6 +99,12 @@ export const PALETTES: Record<TemplateId, ColorPalette[]> = {
     { id: "orange-red", label: "Orange Red", primary: "#f97316", secondary: "#dc2626", gradientFrom: "#f97316", gradientTo: "#dc2626" },
     { id: "green-cyan", label: "Green Cyan", primary: "#16a34a", secondary: "#06b6d4", gradientFrom: "#16a34a", gradientTo: "#06b6d4" },
     { id: "sunset", label: "Sunset", primary: "#fb923c", secondary: "#c026d3", gradientFrom: "#fb923c", gradientTo: "#c026d3" },
+  ],
+  "deped-green": [
+    { id: "deped", label: "DepEd Green", primary: "#15803d", secondary: "#14532d" },
+    { id: "navy", label: "School Navy", primary: "#1e40af", secondary: "#172554" },
+    { id: "maroon", label: "Maroon", primary: "#9f1239", secondary: "#4c0519" },
+    { id: "teal", label: "Teal", primary: "#0f766e", secondary: "#134e4a" },
   ],
 };
 
@@ -174,4 +190,7 @@ export const DEFAULT_DATA: CardData = {
   photo: null,
   logo: null,
   signature: null,
+  gradeSection: "GRADE 11 - PYTHAGORAS",
+  address: "Brgy. Sample, Town, Province",
+  validity: "S.Y. 2026-2027",
 };
