@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../components/AuthProvider";
+import AttendanceReport from "../components/AttendanceReport";
 import { findStudentByLrn } from "@/lib/students";
 import {
   listAttendance,
@@ -22,6 +23,7 @@ type Feedback = {
 
 export default function AttendancePage() {
   const { user, tier, loaded } = useAuth();
+  const [tab, setTab] = useState<"scan" | "report">("scan");
   const [mode, setMode] = useState<Mode>("camera");
   const [status, setStatus] = useState<Status>("present");
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -190,6 +192,15 @@ export default function AttendancePage() {
 
   return (
     <Shell>
+      {/* Scanner / Report tabs */}
+      <div className="no-print flex gap-2 mb-4">
+        <TabBtn active={tab === "scan"} onClick={() => setTab("scan")}>Scanner</TabBtn>
+        <TabBtn active={tab === "report"} onClick={() => setTab("report")}>Report</TabBtn>
+      </div>
+
+      {tab === "report" ? (
+        <AttendanceReport />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="bg-white rounded-xl shadow-sm p-5">
           {/* Device + status controls */}
@@ -290,11 +301,35 @@ export default function AttendancePage() {
           )}
         </aside>
       </div>
+      )}
 
       {feedback && (
         <ResultPopup feedback={feedback} countdown={countdown} onClose={() => setFeedback(null)} />
       )}
     </Shell>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 text-sm font-semibold rounded-md border transition ${
+        active
+          ? "bg-blue-600 text-white border-blue-600"
+          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
